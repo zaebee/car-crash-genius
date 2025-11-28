@@ -102,47 +102,47 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
   const getSeverityStyles = (severity: string) => {
     switch (severity.toLowerCase()) {
       case 'critical': return {
-        bg: 'bg-red-50',
-        text: 'text-red-700',
+        bg: 'bg-red-100',
+        text: 'text-red-800',
         border: 'border-red-200',
-        bar: 'bg-red-500',
-        hoverBorder: 'hover:border-red-300',
+        bar: 'bg-red-600',
+        hoverBorder: 'hover:border-red-400',
         shadow: 'hover:shadow-red-100',
-        icon: <AlertTriangle size={12} className="text-red-600" />,
+        icon: <AlertTriangle size={16} className="text-red-700" />,
         boxColor: 'rgba(239, 68, 68, 0.4)',
         boxBorder: '#ef4444'
       };
       case 'high': return {
-        bg: 'bg-orange-50',
-        text: 'text-orange-700',
+        bg: 'bg-orange-100',
+        text: 'text-orange-800',
         border: 'border-orange-200',
-        bar: 'bg-orange-500',
-        hoverBorder: 'hover:border-orange-300',
+        bar: 'bg-orange-600',
+        hoverBorder: 'hover:border-orange-400',
         shadow: 'hover:shadow-orange-100',
-        icon: <AlertCircle size={12} className="text-orange-600" />,
+        icon: <AlertCircle size={16} className="text-orange-700" />,
         boxColor: 'rgba(249, 115, 22, 0.4)',
         boxBorder: '#f97316'
       };
       case 'medium': return {
-        bg: 'bg-amber-50',
-        text: 'text-amber-700',
+        bg: 'bg-amber-100',
+        text: 'text-amber-800',
         border: 'border-amber-200',
         bar: 'bg-amber-500',
-        hoverBorder: 'hover:border-amber-300',
+        hoverBorder: 'hover:border-amber-400',
         shadow: 'hover:shadow-amber-100',
-        icon: <Activity size={12} className="text-amber-600" />,
+        icon: <Activity size={16} className="text-amber-700" />,
         boxColor: 'rgba(245, 158, 11, 0.4)',
         boxBorder: '#f59e0b'
       };
       case 'low':
       default: return {
-        bg: 'bg-emerald-50',
-        text: 'text-emerald-700',
+        bg: 'bg-emerald-100',
+        text: 'text-emerald-800',
         border: 'border-emerald-200',
         bar: 'bg-emerald-500',
-        hoverBorder: 'hover:border-emerald-300',
+        hoverBorder: 'hover:border-emerald-400',
         shadow: 'hover:shadow-emerald-100',
-        icon: <CheckCircle2 size={12} className="text-emerald-600" />,
+        icon: <CheckCircle2 size={16} className="text-emerald-700" />,
         boxColor: 'rgba(16, 185, 129, 0.4)',
         boxBorder: '#10b981'
       };
@@ -395,11 +395,14 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                   `}
                 >
                   <div className="flex flex-1 items-stretch">
-                      <div className={`w-1.5 ${styles.bar}`}></div>
+                      {/* Thicker, more prominent sidebar */}
+                      <div className={`w-3 sm:w-4 flex-shrink-0 ${styles.bar}`}></div>
+                      
                       <div className="flex-1 p-4 md:p-6 flex flex-col">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
                               <div className="flex items-center gap-2.5">
-                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border flex items-center gap-1 ${styles.bg} ${styles.text} ${styles.border}`}>
+                                  {/* Enhanced badge */}
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}>
                                       {styles.icon}
                                       {item.severity}
                                   </span>
