@@ -125,6 +125,11 @@ const CRASH_SCHEMA: Schema = {
           severity: { type: Type.STRING, enum: ["Low", "Medium", "High", "Critical"] },
           description: { type: Type.STRING, description: "Detailed description of the damage" },
           recommendedAction: { type: Type.STRING, description: "Repair vs Replace vs Paint" },
+          boundingBox: {
+            type: Type.ARRAY,
+            items: { type: Type.NUMBER },
+            description: "2D bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000 for the FIRST image provided."
+          }
         },
         required: ["partName", "damageType", "severity", "description", "recommendedAction"],
       },
@@ -258,9 +263,21 @@ export const generateCrashReport = async (
       "summary": "string",
       "vehiclesInvolved": ["string"],
       "estimatedRepairCostRange": "string",
-      "damagePoints": [{"partName": "string", "damageType": "string", "severity": "Low|Medium|High|Critical", "description": "string", "recommendedAction": "string"}]
+      "damagePoints": [{
+          "partName": "string", 
+          "damageType": "string", 
+          "severity": "Low|Medium|High|Critical", 
+          "description": "string", 
+          "recommendedAction": "string",
+          "boundingBox": [ymin, xmin, ymax, xmax] 
+      }]
     }
-    Use ${langName} for values.
+    
+    CRITICAL: For each "damagePoint", you MUST try to identify its location on the FIRST provided image and return a 
+    bounding box as [ymin, xmin, ymax, xmax] normalized to 0-1000 scale. 
+    If you cannot locate it on the first image, omit the boundingBox field.
+    
+    Use ${langName} for text values (titles, descriptions, part names).
     Additional Context: ${textInput}
   `;
 

@@ -52,6 +52,8 @@ type Translations = {
     uploadAdditional: string;
     viewFullGallery: string;
     analysisReport: string;
+    damageVisualization: string;
+    interactiveMap: string;
   }
 };
 
@@ -107,6 +109,8 @@ export const translations: Translations = {
     uploadAdditional: "Upload Additional Evidence",
     viewFullGallery: "View Full Gallery",
     analysisReport: "Analysis Report",
+    damageVisualization: "Visual Analysis",
+    interactiveMap: "Interactive Damage Map",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -159,5 +163,7 @@ export const translations: Translations = {
     uploadAdditional: "Загрузить материалы",
     viewFullGallery: "Открыть галерею",
     analysisReport: "Отчет об анализе",
+    damageVisualization: "Визуальный анализ",
+    interactiveMap: "Интерактивная карта повреждений",
   }
 };

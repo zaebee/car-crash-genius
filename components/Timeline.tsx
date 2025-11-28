@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
-import { CrashAnalysisResult, UploadedFile } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye } from 'lucide-react';
+import { CrashAnalysisResult, UploadedFile, DamageItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface TimelineProps {
@@ -14,6 +14,22 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
   const { t } = useLanguage();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [activeDamageIndex, setActiveDamageIndex] = useState<number | null>(null);
+
+  // Identify the main image (first image in the list) to be used for overlay
+  const mainImage = files.find(f => f.type.startsWith('image/'));
+
+  // Scroll logic for cards
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  const handleBoxClick = (index: number) => {
+    setActiveDamageIndex(index);
+    // Scroll to card
+    const card = cardRefs.current[index];
+    if (card) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
 
   const getSeverityStyles = (severity: string) => {
     switch (severity.toLowerCase()) {
@@ -24,7 +40,9 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         bar: 'bg-red-500',
         hoverBorder: 'hover:border-red-300',
         shadow: 'hover:shadow-red-100',
-        icon: <AlertTriangle size={12} className="text-red-600" />
+        icon: <AlertTriangle size={12} className="text-red-600" />,
+        boxColor: 'rgba(239, 68, 68, 0.4)',
+        boxBorder: '#ef4444'
       };
       case 'high': return {
         bg: 'bg-orange-50',
@@ -33,7 +51,9 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         bar: 'bg-orange-500',
         hoverBorder: 'hover:border-orange-300',
         shadow: 'hover:shadow-orange-100',
-        icon: <AlertCircle size={12} className="text-orange-600" />
+        icon: <AlertCircle size={12} className="text-orange-600" />,
+        boxColor: 'rgba(249, 115, 22, 0.4)',
+        boxBorder: '#f97316'
       };
       case 'medium': return {
         bg: 'bg-amber-50',
@@ -42,7 +62,9 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         bar: 'bg-amber-500',
         hoverBorder: 'hover:border-amber-300',
         shadow: 'hover:shadow-amber-100',
-        icon: <Activity size={12} className="text-amber-600" />
+        icon: <Activity size={12} className="text-amber-600" />,
+        boxColor: 'rgba(245, 158, 11, 0.4)',
+        boxBorder: '#f59e0b'
       };
       case 'low':
       default: return {
@@ -52,7 +74,9 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         bar: 'bg-emerald-500',
         hoverBorder: 'hover:border-emerald-300',
         shadow: 'hover:shadow-emerald-100',
-        icon: <CheckCircle2 size={12} className="text-emerald-600" />
+        icon: <CheckCircle2 size={12} className="text-emerald-600" />,
+        boxColor: 'rgba(16, 185, 129, 0.4)',
+        boxBorder: '#10b981'
       };
     }
   };
@@ -81,6 +105,53 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
       console.error("html2pdf library not found");
       setIsExporting(false);
     }
+  };
+
+  // Render bounding box overlay
+  const renderBoundingBoxes = () => {
+    if (!mainImage) return null;
+
+    return data.damagePoints.map((item, index) => {
+      if (!item.boundingBox || item.boundingBox.length !== 4) return null;
+      
+      const [ymin, xmin, ymax, xmax] = item.boundingBox;
+      const top = ymin / 10; // Convert 0-1000 to percentage
+      const left = xmin / 10;
+      const height = (ymax - ymin) / 10;
+      const width = (xmax - xmin) / 10;
+      
+      const styles = getSeverityStyles(item.severity);
+      const isActive = activeDamageIndex === index;
+
+      return (
+        <div
+          key={index}
+          onClick={() => handleBoxClick(index)}
+          className={`absolute cursor-pointer transition-all duration-300 group z-10 ${isActive ? 'z-20 scale-105' : ''}`}
+          style={{
+            top: `${top}%`,
+            left: `${left}%`,
+            width: `${width}%`,
+            height: `${height}%`,
+            border: `2px solid ${styles.boxBorder}`,
+            backgroundColor: isActive ? styles.boxColor : 'transparent',
+            boxShadow: isActive ? `0 0 10px ${styles.boxBorder}` : 'none'
+          }}
+        >
+          {/* Label Tooltip */}
+          <div className={`
+             absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded 
+             whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
+             ${isActive ? 'opacity-100' : ''}
+          `}>
+             {item.partName}
+          </div>
+          
+          {/* Pulsing corner for discovery */}
+          <div className={`absolute top-0 right-0 w-2 h-2 ${styles.bar} rounded-full animate-ping opacity-75`}></div>
+        </div>
+      );
+    });
   };
 
   return (
@@ -159,7 +230,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
             </div>
           </div>
 
-          {/* Evidence Gallery */}
+          {/* Evidence Gallery Strip */}
           {files.length > 0 && (
             <div className="mt-8 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
                 <div className="flex items-center justify-between mb-3">
@@ -180,22 +251,12 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                         <div 
                             key={idx}
                             onClick={() => file.type.startsWith('image/') && setPreviewImage(file.data)}
-                            className={`relative w-24 h-24 shrink-0 rounded-lg border border-slate-200 overflow-hidden group cursor-pointer ${!file.type.startsWith('image/') ? 'bg-slate-50 flex flex-col items-center justify-center p-2' : ''}`}
+                            className={`relative w-16 h-16 shrink-0 rounded-lg border border-slate-200 overflow-hidden group cursor-pointer ${!file.type.startsWith('image/') ? 'bg-slate-50 flex flex-col items-center justify-center p-1' : ''}`}
                         >
                             {file.type.startsWith('image/') ? (
-                                <>
-                                    <img src={file.data} alt="evidence" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                        <Maximize2 size={16} className="text-white opacity-0 group-hover:opacity-100" />
-                                    </div>
-                                </>
+                                <img src={file.data} alt="evidence" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
                             ) : (
-                                <>
-                                    <FileText size={24} className="text-slate-400 mb-1" />
-                                    <span className="text-[10px] text-center text-slate-600 leading-tight line-clamp-2 w-full break-words">
-                                        {file.name}
-                                    </span>
-                                </>
+                                <FileText size={20} className="text-slate-400" />
                             )}
                         </div>
                     ))}
@@ -204,26 +265,49 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
           )}
         </div>
 
+        {/* Interactive Damage Map Section */}
+        {mainImage && (
+             <div className="mb-6 bg-slate-900 rounded-2xl p-1 overflow-hidden shadow-lg" data-html2canvas-ignore="true">
+                <div className="bg-slate-900 p-3 flex items-center justify-between">
+                     <div className="flex items-center gap-2 text-white">
+                        <ScanEye size={18} className="text-red-500" />
+                        <span className="text-sm font-bold uppercase tracking-wider">{t.interactiveMap}</span>
+                     </div>
+                     <span className="text-[10px] text-slate-400">Click highlighted areas to focus cards</span>
+                </div>
+                <div className="relative w-full bg-black rounded-xl overflow-hidden group">
+                    <img src={mainImage.data} alt="Analysis" className="w-full h-auto object-contain max-h-[500px] mx-auto opacity-80 transition-opacity group-hover:opacity-100" />
+                    <div className="absolute inset-0 max-h-[500px] mx-auto w-full">
+                       {renderBoundingBoxes()}
+                    </div>
+                </div>
+             </div>
+        )}
+
         {/* Grid Layout for Damage Points */}
         <div className="space-y-4 md:space-y-6">
           <div className="flex items-center gap-3 px-1">
               <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
                   <Activity size={18} />
               </div>
-              <h2 className="text-lg md:text-xl font-bold text-slate-800">Damage Points</h2>
-              <span className="text-xs md:text-sm font-medium text-slate-400 ml-auto hidden sm:block" data-html2canvas-ignore="true">
-                  Click cards for AI details
-              </span>
+              <h2 className="text-lg md:text-xl font-bold text-slate-800">{t.damageVisualization}</h2>
           </div>
           
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
             {data.damagePoints.map((item, index) => {
               const styles = getSeverityStyles(item.severity);
+              const isActive = activeDamageIndex === index;
               return (
                 <div 
-                  key={index} 
+                  key={index}
+                  ref={(el) => { cardRefs.current[index] = el; }}
+                  onMouseEnter={() => setActiveDamageIndex(index)}
+                  onMouseLeave={() => setActiveDamageIndex(null)}
                   onClick={() => onTopicClick?.(`${t.tellMeMore} "${item.partName} - ${item.damageType}"`)}
-                  className={`group bg-white rounded-2xl border border-slate-200 p-0 shadow-sm hover:shadow-lg transition-all cursor-pointer relative overflow-hidden flex flex-col h-full break-inside-avoid ${styles.hoverBorder} ${styles.shadow}`}
+                  className={`group bg-white rounded-2xl border p-0 shadow-sm transition-all cursor-pointer relative overflow-hidden flex flex-col h-full break-inside-avoid duration-300
+                    ${isActive ? `ring-2 ring-offset-2 ${styles.border.replace('border-', 'ring-')}` : 'border-slate-200'}
+                    ${styles.hoverBorder} ${styles.shadow}
+                  `}
                 >
                   <div className="flex flex-1 items-stretch">
                       {/* Severity Indicator Strip */}
@@ -292,7 +376,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
             src={previewImage} 
             alt="Full size evidence" 
             className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image
+            onClick={(e) => e.stopPropagation()} 
           />
         </div>
       )}

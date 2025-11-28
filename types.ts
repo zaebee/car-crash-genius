@@ -16,6 +16,7 @@ export interface DamageItem {
   severity: 'Low' | 'Medium' | 'High' | 'Critical';
   description: string;
   recommendedAction: string; // e.g., "Replace", "Repair", "Paint"
+  boundingBox?: number[]; // [ymin, xmin, ymax, xmax] normalized to 0-1000
 }
 
 export interface CrashAnalysisResult {
