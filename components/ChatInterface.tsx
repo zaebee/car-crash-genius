@@ -7,13 +7,13 @@ import { AVAILABLE_MODELS } from './Sidebar';
 
 interface ChatInterfaceProps {
   initialData: CrashAnalysisResult;
-  file: UploadedFile | null;
+  files: UploadedFile[];
   suggestedQuery?: string;
   selectedModel?: AIModel; // Make optional but use if present
   mistralKey?: string;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, suggestedQuery, selectedModel, mistralKey }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, files, suggestedQuery, selectedModel, mistralKey }) => {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -28,7 +28,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
   useEffect(() => {
     // Prevent re-initialization if data or language hasn't changed
     const modelId = selectedModel?.id || AVAILABLE_MODELS[0].id;
-    const dataId = initialData.title + (file?.name || '') + language + modelId;
+    // Generate simple ID based on file names length to detect change
+    const filesId = files.map(f => f.name).join(',');
+    const dataId = initialData.title + filesId + language + modelId;
     
     if (initializedRef.current === dataId) return;
 
@@ -37,7 +39,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
     const initSession = async () => {
       setIsInitializing(true);
       try {
-        const chatSession = await createChatSession(initialData, file, language, modelToUse, mistralKey);
+        const chatSession = await createChatSession(initialData, files, language, modelToUse, mistralKey);
         setSession(chatSession);
         setMessages([{ role: 'model', text: t.chatReady.replace("{title}", initialData.title) }]);
         initializedRef.current = dataId;
@@ -50,7 +52,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
     };
 
     initSession();
-  }, [initialData, file, language, t, selectedModel, mistralKey]);
+  }, [initialData, files, language, t, selectedModel, mistralKey]);
 
   // Handle Suggested Query from Timeline
   useEffect(() => {

@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle } from 'lucide-react';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText } from 'lucide-react';
 import { CrashAnalysisResult, UploadedFile } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface TimelineProps {
   data: CrashAnalysisResult;
-  file: UploadedFile | null;
+  files: UploadedFile[];
   onTopicClick?: (topic: string) => void;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
+const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick }) => {
   const { t } = useLanguage();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -56,8 +56,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
     }
   };
 
-  const isImageFile = file?.type.startsWith('image/');
-
   const handleExportPdf = () => {
     setIsExporting(true);
     const element = document.getElementById('report-content');
@@ -65,7 +63,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
       margin: [10, 10],
       filename: `Crash-Report-${data.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, windowWidth: 1280 }, // Force desktop width
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -88,43 +86,43 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
     <div className="w-full max-w-7xl mx-auto p-4 md:p-8 animate-in fade-in duration-700 pb-24 md:pb-12">
       <div id="report-content">
         {/* Dashboard Header */}
-        <div className="mb-8 bg-white rounded-2xl p-6 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
+        <div className="mb-6 md:mb-8 bg-white rounded-2xl p-5 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
           {/* Decorative background element */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
 
-          <div className="flex flex-col lg:flex-row gap-8 lg:items-start justify-between relative z-10">
+          <div className="flex flex-col lg:flex-row gap-6 lg:items-start justify-between relative z-10">
             <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4">
-                  <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4 leading-tight tracking-tight">
+              <div className="flex items-start justify-between gap-4 mb-3">
+                  <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
                     {data.title}
                   </h1>
                   
-                  {/* PDF Export Button (Hidden in PDF via data-html2canvas-ignore) */}
+                  {/* PDF Export Button */}
                   <button 
                     onClick={handleExportPdf}
                     disabled={isExporting}
                     data-html2canvas-ignore="true"
-                    className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="shrink-0 flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold uppercase tracking-wider transition-colors disabled:opacity-50"
                   >
-                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={18} />}
                     <span className="hidden sm:inline">{t.exportPdf}</span>
                   </button>
               </div>
 
-              <p className="text-slate-600 text-base md:text-lg leading-relaxed max-w-3xl">
+              <p className="text-slate-600 text-sm md:text-lg leading-relaxed max-w-3xl mb-5">
                 {data.summary}
               </p>
               
               {/* Vehicles Tags */}
-              <div className="mt-6 flex flex-wrap gap-2 items-center">
-                <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mr-2">
+              <div className="flex flex-wrap gap-2 items-center">
+                <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mr-1">
                     <CarFront size={14} />
                     {t.attendees}
                 </span>
                 {data.vehiclesInvolved.map((vehicle, idx) => (
                     <span 
                         key={idx} 
-                        className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs md:text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200"
                     >
                         {vehicle}
                     </span>
@@ -132,44 +130,83 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
               </div>
             </div>
 
-            {/* Stats Cards */}
-            <div className="flex flex-row lg:flex-col gap-4 shrink-0 w-full lg:w-72">
-              <div className="flex-1 flex items-center gap-4 bg-emerald-50/50 px-5 py-4 rounded-xl border border-emerald-100/60 transition-transform hover:scale-[1.02]">
-                <div className="p-2.5 bg-white rounded-xl border border-emerald-100 text-emerald-600 shadow-sm">
-                   <CircleDollarSign size={24} />
+            {/* Compact Stats Grid */}
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 w-full lg:w-64 shrink-0 mt-2 lg:mt-0">
+              <div className="flex items-center gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 hover:border-emerald-200 transition-colors">
+                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-emerald-100 text-emerald-600 shadow-sm shrink-0">
+                   <CircleDollarSign size={20} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-emerald-600/70 uppercase tracking-wide mb-0.5">{t.costEst}</p>
-                  <p className="font-bold text-slate-800 text-base md:text-lg">{data.estimatedRepairCostRange}</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="text-[9px] font-bold text-emerald-600/70 uppercase tracking-wide truncate">{t.costEst}</p>
+                  <p className="font-bold text-slate-800 text-sm md:text-base truncate" title={data.estimatedRepairCostRange}>
+                    {data.estimatedRepairCostRange}
+                  </p>
                 </div>
               </div>
               
-              <div className="flex-1 flex items-center gap-4 bg-rose-50/50 px-5 py-4 rounded-xl border border-rose-100/60 transition-transform hover:scale-[1.02]">
-                <div className="p-2.5 bg-white rounded-xl border border-rose-100 text-rose-500 shadow-sm">
-                    <AlertOctagon size={24} />
+              <div className="flex items-center gap-3 bg-rose-50/50 p-3 rounded-xl border border-rose-100 hover:border-rose-200 transition-colors">
+                <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-rose-100 text-rose-500 shadow-sm shrink-0">
+                    <AlertOctagon size={20} />
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-rose-600/70 uppercase tracking-wide mb-0.5">{t.totalDuration}</p>
-                  <p className="font-bold text-slate-800 text-base md:text-lg">{data.damagePoints.length} found</p>
+                <div className="min-w-0 overflow-hidden">
+                  <p className="text-[9px] font-bold text-rose-600/70 uppercase tracking-wide truncate">{t.totalDuration}</p>
+                  <p className="font-bold text-slate-800 text-sm md:text-base truncate">
+                    {data.damagePoints.length} found
+                  </p>
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Evidence Gallery */}
+          {files.length > 0 && (
+            <div className="mt-8 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                    <ImageIcon size={14} />
+                    {t.evidenceGallery}
+                </h3>
+                <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {files.map((file, idx) => (
+                        <div 
+                            key={idx}
+                            onClick={() => file.type.startsWith('image/') && setPreviewImage(file.data)}
+                            className={`relative w-24 h-24 shrink-0 rounded-lg border border-slate-200 overflow-hidden group cursor-pointer ${!file.type.startsWith('image/') ? 'bg-slate-50 flex flex-col items-center justify-center p-2' : ''}`}
+                        >
+                            {file.type.startsWith('image/') ? (
+                                <>
+                                    <img src={file.data} alt="evidence" className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                        <Maximize2 size={16} className="text-white opacity-0 group-hover:opacity-100" />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <FileText size={24} className="text-slate-400 mb-1" />
+                                    <span className="text-[10px] text-center text-slate-600 leading-tight line-clamp-2 w-full break-words">
+                                        {file.name}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </div>
+          )}
         </div>
 
         {/* Grid Layout for Damage Points */}
-        <div className="space-y-6">
+        <div className="space-y-4 md:space-y-6">
           <div className="flex items-center gap-3 px-1">
               <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
                   <Activity size={18} />
               </div>
-              <h2 className="text-xl font-bold text-slate-800">Damage Points</h2>
-              <span className="text-sm font-medium text-slate-400 ml-auto hidden sm:block" data-html2canvas-ignore="true">
+              <h2 className="text-lg md:text-xl font-bold text-slate-800">Damage Points</h2>
+              <span className="text-xs md:text-sm font-medium text-slate-400 ml-auto hidden sm:block" data-html2canvas-ignore="true">
                   Click cards for AI details
               </span>
           </div>
           
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 md:gap-6">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
             {data.damagePoints.map((item, index) => {
               const styles = getSeverityStyles(item.severity);
               return (
@@ -182,23 +219,23 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
                       {/* Severity Indicator Strip */}
                       <div className={`w-1.5 ${styles.bar}`}></div>
                       
-                      <div className="flex-1 p-5 md:p-6 flex flex-col">
+                      <div className="flex-1 p-4 md:p-6 flex flex-col">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
-                              <div className="flex items-center gap-3">
-                                  <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wide border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}>
+                              <div className="flex items-center gap-2.5">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border flex items-center gap-1 ${styles.bg} ${styles.text} ${styles.border}`}>
                                       {styles.icon}
                                       {item.severity}
                                   </span>
-                                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-red-600 transition-colors">
+                                  <h3 className="text-base md:text-lg font-bold text-slate-800 group-hover:text-red-600 transition-colors leading-tight">
                                       {item.partName}
                                   </h3>
                               </div>
-                              <span className="self-start sm:self-auto text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-md">
+                              <span className="self-start sm:self-auto text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-md">
                                  {item.damageType}
                               </span>
                           </div>
                           
-                          <p className="text-slate-600 text-sm leading-relaxed mb-6 flex-1">
+                          <p className="text-slate-600 text-sm leading-relaxed mb-5 flex-1">
                               {item.description}
                           </p>
 
@@ -206,36 +243,19 @@ const Timeline: React.FC<TimelineProps> = ({ data, file, onTopicClick }) => {
                               <div className="flex flex-col gap-3">
                                   <div className="flex items-center gap-2">
                                       <Wrench size={14} className="text-slate-400" />
-                                      <span className="text-xs font-bold text-slate-400 uppercase mr-1">{t.action}:</span>
-                                      <span className="text-sm font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                                      <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mr-1">{t.action}:</span>
+                                      <span className="text-xs md:text-sm font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
                                           {item.recommendedAction}
                                       </span>
                                   </div>
-                                  {/* Image Thumbnail Section */}
-                                  {isImageFile && file?.data && (
-                                    <div 
-                                      className="flex items-center gap-2 group/thumb"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setPreviewImage(file.data);
-                                      }}
-                                    >
-                                      <div className="relative w-16 h-12 rounded-lg overflow-hidden border border-slate-200 shadow-sm cursor-zoom-in">
-                                        <img src={file.data} alt="Evidence" className="w-full h-full object-cover" />
-                                        <div className="absolute inset-0 bg-black/0 group-hover/thumb:bg-black/10 transition-colors flex items-center justify-center">
-                                           <Maximize2 size={12} className="text-white opacity-0 group-hover/thumb:opacity-100 drop-shadow-md" />
-                                        </div>
-                                      </div>
-                                      <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider group-hover/thumb:text-red-500 transition-colors" data-html2canvas-ignore="true">
-                                        {t.sourceMaterial}
-                                      </span>
-                                    </div>
-                                  )}
                               </div>
                               
-                              <div className="flex items-center gap-1 text-xs font-semibold text-red-600 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-[-10px] group-hover:translate-x-0 duration-300 mb-2" data-html2canvas-ignore="true">
+                              <button 
+                                className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+                                data-html2canvas-ignore="true"
+                              >
                                   Ask AI <ArrowRight size={14} />
-                              </div>
+                              </button>
                           </div>
                       </div>
                   </div>

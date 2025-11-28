@@ -42,6 +42,9 @@ type Translations = {
     apiKeyPlaceholder: string;
     apiKeyNote: string;
     exportPdf: string;
+    evidenceGallery: string;
+    filesAttached: string;
+    addMore: string;
   }
 };
 
@@ -49,8 +52,8 @@ export const translations: Translations = {
   en: {
     appTitle: "CarCrashGenius",
     appSubtitle: "AI Insurance Adjuster",
-    sourceMaterial: "Evidence",
-    dropFile: "Drop crash photos or docs\n(JPG, PNG, PDF, TXT)",
+    sourceMaterial: "Evidence Files",
+    dropFile: "Drop photos or docs here\n(JPG, PNG, PDF, TXT)",
     additionalContext: "Incident Details",
     contextPlaceholder: "E.g. Speed approx 30mph, hit by SUV from right side...",
     createAgenda: "Analyze Evidence",
@@ -64,7 +67,7 @@ export const translations: Translations = {
     showAssistant: "Chat",
     hideAssistant: "Hide",
     readyToBuild: "Ready to assess damage",
-    readyDescription: "Upload photos or official documents (PDF/TXT) of the accident to automatically identify damage, estimate repair complexity, and generate an independent report.",
+    readyDescription: "Upload multiple photos or official documents (PDF/TXT) of the accident to automatically identify damage, estimate repair complexity, and generate an independent report.",
     analyzing: "Processing Evidence",
     identifying: "Cross-referencing docs and visual damage...",
     failedError: "Failed to analyze evidence. Please ensure files are clear.",
@@ -87,12 +90,15 @@ export const translations: Translations = {
     apiKeyPlaceholder: "Enter key...",
     apiKeyNote: "Stored locally in browser",
     exportPdf: "Export PDF",
+    evidenceGallery: "Evidence Gallery",
+    filesAttached: "Files Attached",
+    addMore: "Add Files",
   },
   ru: {
     appTitle: "CarCrashGenius",
     appSubtitle: "ИИ Страховой Эксперт",
-    sourceMaterial: "Доказательства",
-    dropFile: "Загрузите фото или доки\n(JPG, PNG, PDF, TXT)",
+    sourceMaterial: "Файлы доказательств",
+    dropFile: "Перетащите фото или доки\n(JPG, PNG, PDF, TXT)",
     additionalContext: "Детали происшествия",
     contextPlaceholder: "Например: скорость 50 км/ч, удар справа от внедорожника...",
     createAgenda: "Анализ данных",
@@ -129,5 +135,8 @@ export const translations: Translations = {
     apiKeyPlaceholder: "Введите ключ...",
     apiKeyNote: "Хранится локально в браузере",
     exportPdf: "Скачать PDF",
+    evidenceGallery: "Галерея доказательств",
+    filesAttached: "Файлов прикреплено",
+    addMore: "Добавить",
   }
 };

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key } from 'lucide-react';
+import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus } from 'lucide-react';
 import { UploadedFile, AIModel } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -10,7 +10,7 @@ export const AVAILABLE_MODELS: AIModel[] = [
 ];
 
 interface SidebarProps {
-  onGenerate: (file: UploadedFile | null, text: string) => void;
+  onGenerate: (files: UploadedFile[], text: string) => void;
   isGenerating: boolean;
   hasAgenda: boolean;
   isOpen?: boolean;
@@ -33,71 +33,43 @@ const Sidebar: React.FC<SidebarProps> = ({
   onMistralKeyChange
 }) => {
   const { t } = useLanguage();
-  const [file, setFile] = useState<UploadedFile | null>(null);
+  const [files, setFiles] = useState<UploadedFile[]>([]);
   const [textInput, setTextInput] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0];
-      const reader = new FileReader();
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
       
-      reader.onload = (event) => {
-        if (event.target?.result) {
-          setFile({
-            name: selectedFile.name,
-            type: selectedFile.type,
-            data: event.target.result as string,
-          });
-        }
-      };
-      
-      reader.readAsDataURL(selectedFile);
+      newFiles.forEach(file => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            if (event.target?.result) {
+              setFiles(prev => [...prev, {
+                name: file.name,
+                type: file.type,
+                data: event.target?.result as string,
+              }]);
+            }
+          };
+          reader.readAsDataURL(file);
+      });
+      // Reset input to allow selecting same file again
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  const handleRemoveFile = () => {
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleRemoveFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = () => {
-    if (!file && !textInput.trim()) return;
-    onGenerate(file, textInput);
+    if (files.length === 0 && !textInput.trim()) return;
+    onGenerate(files, textInput);
     if (window.innerWidth < 768 && onClose) {
        onClose();
     }
-  };
-
-  const renderFilePreview = () => {
-    if (!file) return null;
-
-    const isImage = file.type.startsWith('image/');
-
-    return (
-        <div className="bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center justify-between group hover:border-slate-600 transition-colors">
-          <div className="flex items-center gap-3 overflow-hidden">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg overflow-hidden shrink-0 flex items-center justify-center">
-              {isImage ? (
-                <img src={file.data} alt="preview" className="w-full h-full object-cover" />
-              ) : (
-                <FileText className="text-slate-400" size={20} />
-              )}
-            </div>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm text-slate-200 truncate font-medium">{file.name}</span>
-              <span className="text-[10px] text-slate-500 uppercase">{file.type.split('/')[1] || 'FILE'}</span>
-            </div>
-          </div>
-          <button 
-            onClick={handleRemoveFile}
-            className="text-slate-500 hover:text-red-400 transition-colors p-1"
-          >
-            <X size={16} />
-          </button>
-        </div>
-    );
   };
 
   const getProviderIcon = (provider: string) => {
@@ -199,7 +171,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </div>
 
-          {/* Conditional API Key Input (Mistral only) */}
+          {/* Conditional API Key Input */}
           {selectedModel.provider === 'mistral' && (
             <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-300">
                 <label className="text-xs font-semibold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
@@ -213,30 +185,72 @@ const Sidebar: React.FC<SidebarProps> = ({
                     placeholder={t.apiKeyPlaceholder}
                     className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none placeholder:text-slate-600 transition-all"
                 />
-                <p className="text-[10px] text-slate-500">{t.apiKeyNote}</p>
             </div>
           )}
 
           {/* File Upload Section */}
           <div className="space-y-3">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-              {t.sourceMaterial}
-            </label>
-            {!file ? (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="border border-dashed border-slate-700 bg-slate-800/50 rounded-xl p-6 md:p-8 flex flex-col items-center justify-center text-slate-400 hover:border-red-500 hover:text-red-400 hover:bg-slate-800 cursor-pointer transition-all group"
-              >
-                <div className="flex gap-2 mb-3">
-                    <Upload className="group-hover:scale-110 transition-transform" size={24} />
+            <div className="flex justify-between items-center">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                {t.sourceMaterial}
+                </label>
+                {files.length > 0 && (
+                     <span className="text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full border border-slate-700">
+                        {files.length} {t.filesAttached.toLowerCase()}
+                     </span>
+                )}
+            </div>
+
+            <div className="space-y-2">
+                {/* File List */}
+                {files.map((file, idx) => (
+                    <div key={idx} className="bg-slate-800 border border-slate-700 rounded-xl p-2.5 flex items-center justify-between group hover:border-slate-600 transition-colors animate-in fade-in slide-in-from-left-2 duration-300">
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 bg-slate-700 rounded-lg overflow-hidden shrink-0 flex items-center justify-center relative">
+                                {file.type.startsWith('image/') ? (
+                                    <img src={file.data} alt="preview" className="w-full h-full object-cover" />
+                                ) : (
+                                    <FileText className="text-slate-400" size={20} />
+                                )}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                                <span className="text-sm text-slate-200 truncate font-medium max-w-[140px]">{file.name}</span>
+                                <span className="text-[10px] text-slate-500 uppercase">{file.type.split('/')[1] || 'FILE'}</span>
+                            </div>
+                        </div>
+                        <button 
+                            onClick={() => handleRemoveFile(idx)}
+                            className="text-slate-500 hover:text-red-400 hover:bg-slate-700/50 rounded-lg p-1.5 transition-colors"
+                        >
+                            <X size={16} />
+                        </button>
+                    </div>
+                ))}
+
+                {/* Drop Zone / Add Button */}
+                <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border border-dashed border-slate-700 bg-slate-800/30 rounded-xl p-4 flex items-center justify-center text-slate-400 hover:border-red-500 hover:text-red-400 hover:bg-slate-800 cursor-pointer transition-all group ${files.length > 0 ? 'h-16' : 'h-32 flex-col'}`}
+                >
+                    {files.length > 0 ? (
+                        <div className="flex items-center gap-2 text-sm font-medium">
+                            <Plus size={18} />
+                            {t.addMore}
+                        </div>
+                    ) : (
+                        <>
+                            <Upload className="group-hover:scale-110 transition-transform mb-3" size={24} />
+                            <span className="text-xs font-medium text-center whitespace-pre-line leading-relaxed">{t.dropFile}</span>
+                        </>
+                    )}
                 </div>
-                <span className="text-xs font-medium text-center whitespace-pre-line leading-relaxed">{t.dropFile}</span>
-              </div>
-            ) : renderFilePreview()}
+            </div>
+            
             <input 
               type="file" 
               ref={fileInputRef} 
               className="hidden" 
+              multiple
               accept="image/png, image/jpeg, image/webp, application/pdf, text/plain"
               onChange={handleFileChange}
             />
@@ -258,9 +272,9 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Action Button */}
           <button
             onClick={handleSubmit}
-            disabled={isGenerating || (!file && !textInput.trim())}
+            disabled={isGenerating || (files.length === 0 && !textInput.trim())}
             className={`w-full py-4 px-4 rounded-xl flex items-center justify-center gap-2 font-bold transition-all shadow-lg ${
-              isGenerating || (!file && !textInput.trim())
+              isGenerating || (files.length === 0 && !textInput.trim())
                 ? 'bg-slate-800 text-slate-600 cursor-not-allowed border border-slate-700'
                 : 'bg-red-600 text-white hover:bg-red-500 hover:shadow-red-600/25 active:scale-[0.98]'
             }`}

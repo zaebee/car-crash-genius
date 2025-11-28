@@ -148,14 +148,7 @@ const generateGoogleReport = async (parts: any[], modelId: string, langName: str
 };
 
 // --- Mistral Generator ---
-const generateMistralReport = async (prompt: string, file: UploadedFile | null, apiKey: string, langName: string) => {
-    // Mistral Image support is limited in "Large" via API standard, usually requires URL.
-    // For this implementation, if file is image/base64, we might need a model that supports vision (Pixtral) or just text.
-    // Assuming Mistral Large for text/docs logic. If image is provided, we might fail or need Pixtral.
-    // Let's use text-only logic or assume Pixtral 12B if available, or just instruct user.
-    // Note: Standard Mistral Large is text-only. Pixtral is vision.
-    // We will attempt to send image url if base64 supported, otherwise text only.
-    
+const generateMistralReport = async (prompt: string, files: UploadedFile[], apiKey: string, langName: string) => {
     let messages: any[] = [
         { role: "system", content: `You are a helpful insurance adjuster. Output valid JSON only matching the requested schema. Language: ${langName}.` },
         { role: "user", content: [] }
@@ -164,17 +157,17 @@ const generateMistralReport = async (prompt: string, file: UploadedFile | null, 
     // Construct content array
     let contentArr: any[] = [{ type: "text", text: prompt }];
 
-    if (file && file.type.startsWith('image/')) {
-       contentArr.push({
-           type: "image_url",
-           image_url: { url: file.data } // data:image/... base64
-       });
-    } else if (file && file.type === 'application/pdf') {
-       // Mistral doesn't natively parse PDF base64 in chat message standard yet without OCR tool.
-       // We'll just pass text if we had it, but here we only have base64.
-       // Fallback: Inform model about the file existence.
-       contentArr.push({ type: "text", text: "[Attached PDF Document Data - Mocked as text extraction not available in browser-side Mistral call]" });
-    }
+    // Handle multiple files
+    files.forEach(file => {
+        if (file.type.startsWith('image/')) {
+           contentArr.push({
+               type: "image_url",
+               image_url: { url: file.data } 
+           });
+        } else {
+           contentArr.push({ type: "text", text: `[Attached Document: ${file.name} - Mocked as text extraction not available in browser-side Mistral call]` });
+        }
+    });
 
     messages[1].content = contentArr;
 
@@ -185,7 +178,7 @@ const generateMistralReport = async (prompt: string, file: UploadedFile | null, 
             "Authorization": `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-            model: "pixtral-12b-2409", // Use Pixtral for Vision support if available, or mistral-large-latest
+            model: "pixtral-12b-2409", 
             messages: messages,
             response_format: { type: "json_object" }
         })
@@ -202,7 +195,7 @@ const generateMistralReport = async (prompt: string, file: UploadedFile | null, 
 };
 
 export const generateCrashReport = async (
-  file: UploadedFile | null,
+  files: UploadedFile[],
   textInput: string,
   language: Language,
   model: AIModel,
@@ -212,7 +205,7 @@ export const generateCrashReport = async (
   const langName = language === 'ru' ? 'Russian' : 'English';
   const prompt = `
     You are an expert independent insurance adjuster and automotive engineer. 
-    Analyze the provided evidence.
+    Analyze the provided evidence (images and documents).
     Estimate repair costs and identify damages.
     IMPORTANT: Output strictly valid JSON matching this structure:
     {
@@ -228,12 +221,13 @@ export const generateCrashReport = async (
 
   if (model.provider === 'mistral') {
      if (!mistralApiKey) throw new Error("MISTRAL_NOT_CONFIGURED");
-     return generateMistralReport(prompt, file, mistralApiKey, langName);
+     return generateMistralReport(prompt, files, mistralApiKey, langName);
   }
 
   // Google Logic
   const parts: any[] = [{ text: prompt }];
-  if (file) {
+  
+  files.forEach(file => {
     const base64Data = file.data.split(',')[1];
     parts.push({
       inlineData: {
@@ -241,14 +235,15 @@ export const generateCrashReport = async (
         data: base64Data,
       },
     });
-  }
+  });
+
   return generateGoogleReport(parts, model.id, langName);
 };
 
 
 export const createChatSession = async (
   contextData: CrashAnalysisResult,
-  file: UploadedFile | null,
+  files: UploadedFile[],
   language: Language,
   model: AIModel,
   mistralApiKey?: string
@@ -289,17 +284,23 @@ export const createChatSession = async (
   const apiModelName = resolveGoogleModelId(model.id);
   
   const history = [];
-  if (file) {
-    const base64Data = file.data.split(',')[1];
+  
+  // Attach all files to initial history
+  if (files.length > 0) {
+    const fileParts = files.map(f => ({
+        inlineData: { mimeType: f.type, data: f.data.split(',')[1] }
+    }));
+    
     history.push({
       role: 'user',
-      parts: [{ text: "Here is the source evidence." }, { inlineData: { mimeType: file.type, data: base64Data } }],
+      parts: [{ text: "Here is the source evidence." }, ...fileParts],
     });
     history.push({
       role: 'model',
       parts: [{ text: "I have analyzed the provided evidence." }],
     });
   }
+
   history.push({
     role: 'user',
     parts: [{ text: `Here is the generated damage report:\n${reportContext}` }],

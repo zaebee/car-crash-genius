@@ -10,7 +10,7 @@ import { useLanguage } from './contexts/LanguageContext';
 const App: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
   const [meetingData, setMeetingData] = useState<CrashAnalysisResult | null>(null);
-  const [currentFile, setCurrentFile] = useState<UploadedFile | null>(null);
+  const [currentFiles, setCurrentFiles] = useState<UploadedFile[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -21,15 +21,15 @@ const App: React.FC = () => {
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
   const [mistralKey, setMistralKey] = useState<string>('');
 
-  const handleGenerate = async (file: UploadedFile | null, text: string) => {
+  const handleGenerate = async (files: UploadedFile[], text: string) => {
     setIsGenerating(true);
     setError(null);
-    setCurrentFile(file);
+    setCurrentFiles(files);
     setMeetingData(null); // Clear previous
     setIsSidebarOpen(false); // Close sidebar on mobile after submit
     
     try {
-      const data = await generateCrashReport(file, text, language, selectedModel, mistralKey);
+      const data = await generateCrashReport(files, text, language, selectedModel, mistralKey);
       setMeetingData(data);
       // On desktop open chat automatically, on mobile keep closed to show report first
       if (window.innerWidth >= 768) {
@@ -164,7 +164,7 @@ const App: React.FC = () => {
           )}
 
           {meetingData && !isGenerating && (
-            <Timeline data={meetingData} onTopicClick={handleTopicClick} file={currentFile} />
+            <Timeline data={meetingData} onTopicClick={handleTopicClick} files={currentFiles} />
           )}
         </main>
       </div>
@@ -191,7 +191,7 @@ const App: React.FC = () => {
             <div className="h-full w-full md:w-[400px]"> {/* Fixed width container */}
                 <ChatInterface 
                     initialData={meetingData} 
-                    file={currentFile} 
+                    files={currentFiles} 
                     suggestedQuery={suggestedQuery}
                     selectedModel={selectedModel}
                     mistralKey={mistralKey}
