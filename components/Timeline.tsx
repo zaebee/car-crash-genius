@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap, Wallet, BadgeCheck, Lock, ExternalLink, Hash, Database, FileCheck } from 'lucide-react';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap, Wallet, BadgeCheck, Lock, ExternalLink, Hash, Database, FileCheck, ChevronDown } from 'lucide-react';
 import { CrashAnalysisResult, UploadedFile, DamageItem, TonWalletState } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { sendTransaction, connectWallet, generateReportHash } from '../services/tonService';
@@ -19,7 +19,10 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
   const { t } = useLanguage();
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const [activeDamageIndex, setActiveDamageIndex] = useState<number | null>(null);
+  
+  // Interaction State
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   
   // Certification State
   const [certStep, setCertStep] = useState<CertStep>('idle');
@@ -31,7 +34,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const handleBoxClick = (index: number) => {
-    setActiveDamageIndex(index);
+    setExpandedIndex(index === expandedIndex ? null : index);
     const card = cardRefs.current[index];
     if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -187,12 +190,15 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
       const width = (xmax - xmin) / 10;
       
       const styles = getSeverityStyles(item.severity);
-      const isActive = activeDamageIndex === index;
+      const isActive = expandedIndex === index;
+      const isHovered = hoveredIndex === index;
 
       return (
         <div
           key={index}
-          onClick={() => handleBoxClick(index)}
+          onClick={(e) => { e.stopPropagation(); handleBoxClick(index); }}
+          onMouseEnter={() => setHoveredIndex(index)}
+          onMouseLeave={() => setHoveredIndex(null)}
           className={`absolute cursor-pointer transition-all duration-300 group z-10 ${isActive ? 'z-20 scale-105' : ''}`}
           style={{
             top: `${top}%`,
@@ -200,18 +206,20 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
             width: `${width}%`,
             height: `${height}%`,
             border: `2px solid ${styles.boxBorder}`,
-            backgroundColor: isActive ? styles.boxColor : 'transparent',
-            boxShadow: isActive ? `0 0 10px ${styles.boxBorder}` : 'none'
+            backgroundColor: isActive || isHovered ? styles.boxColor : 'transparent',
+            boxShadow: isActive || isHovered ? `0 0 10px ${styles.boxBorder}` : 'none'
           }}
         >
           <div className={`
              absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded 
-             whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
-             ${isActive ? 'opacity-100' : ''}
+             whitespace-nowrap opacity-0 transition-opacity pointer-events-none
+             ${isActive || isHovered ? 'opacity-100' : ''}
           `}>
              {item.partName}
           </div>
-          <div className={`absolute top-0 right-0 w-2 h-2 ${styles.bar} rounded-full animate-ping opacity-75`}></div>
+          {(isActive || isHovered) && (
+              <div className={`absolute top-0 right-0 w-2 h-2 ${styles.bar} rounded-full animate-ping opacity-75`}></div>
+          )}
         </div>
       );
     });
@@ -363,7 +371,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                 </div>
                 <div className="relative w-full bg-black rounded-xl overflow-hidden group">
                     <img src={mainImage.data} alt="Analysis" className="w-full h-auto object-contain max-h-[500px] mx-auto opacity-80 transition-opacity group-hover:opacity-100" />
-                    <div className="absolute inset-0 max-h-[500px] mx-auto w-full">
+                    <div className="absolute inset-0 max-h-[500px] mx-auto w-full" onClick={() => setExpandedIndex(null)}>
                        {renderBoundingBoxes()}
                     </div>
                 </div>
@@ -381,28 +389,30 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
             {data.damagePoints.map((item, index) => {
               const styles = getSeverityStyles(item.severity);
-              const isActive = activeDamageIndex === index;
+              const isExpanded = expandedIndex === index;
+              const isHovered = hoveredIndex === index;
+              
               return (
                 <div 
                   key={index}
                   ref={(el) => { cardRefs.current[index] = el; }}
-                  onMouseEnter={() => setActiveDamageIndex(index)}
-                  onMouseLeave={() => setActiveDamageIndex(null)}
-                  onClick={() => onTopicClick?.(`${t.tellMeMore} "${item.partName} - ${item.damageType}"`)}
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onMouseLeave={() => setHoveredIndex(null)}
+                  onClick={() => setExpandedIndex(isExpanded ? null : index)}
                   className={`group bg-white rounded-2xl border p-0 shadow-sm transition-all cursor-pointer relative overflow-hidden flex flex-col h-full break-inside-avoid duration-300
-                    ${isActive ? `ring-2 ring-offset-2 ${styles.border.replace('border-', 'ring-')}` : 'border-slate-200'}
+                    ${isExpanded || isHovered ? `ring-2 ring-offset-2 ${styles.border.replace('border-', 'ring-')}` : 'border-slate-200'}
                     ${styles.hoverBorder} ${styles.shadow}
                   `}
                 >
                   <div className="flex flex-1 items-stretch">
                       {/* Thicker, more prominent sidebar */}
-                      <div className={`w-3 sm:w-4 flex-shrink-0 ${styles.bar}`}></div>
+                      <div className={`w-3 sm:w-5 flex-shrink-0 ${styles.bar}`}></div>
                       
                       <div className="flex-1 p-4 md:p-6 flex flex-col">
-                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
+                          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-2 gap-2">
                               <div className="flex items-center gap-2.5">
                                   {/* Enhanced badge */}
-                                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border}`}>
+                                  <span className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase tracking-wide border flex items-center gap-1.5 ${styles.bg} ${styles.text} ${styles.border} shadow-sm`}>
                                       {styles.icon}
                                       {item.severity}
                                   </span>
@@ -410,33 +420,52 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                                       {item.partName}
                                   </h3>
                               </div>
-                              <span className="self-start sm:self-auto text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-md">
-                                 {item.damageType}
-                              </span>
+                              <div className="flex items-center gap-2 self-start sm:self-auto">
+                                <span className="text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-wide bg-slate-100 px-2 py-1 rounded-md">
+                                   {item.damageType}
+                                </span>
+                                <ChevronDown size={16} className={`text-slate-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                              </div>
                           </div>
                           
-                          <p className="text-slate-600 text-sm leading-relaxed mb-5 flex-1">
-                              {item.description}
-                          </p>
+                          {/* Accordion Content */}
+                          <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+                             <div className="overflow-hidden">
+                                  <p className="text-slate-600 text-sm leading-relaxed mb-5 mt-2 animate-in fade-in duration-500">
+                                      {item.description}
+                                  </p>
 
-                          <div className="flex items-end justify-between pt-4 border-t border-slate-50 mt-auto">
-                              <div className="flex flex-col gap-3">
-                                  <div className="flex items-center gap-2">
-                                      <Wrench size={14} className="text-slate-400" />
-                                      <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mr-1">{t.action}:</span>
-                                      <span className="text-xs md:text-sm font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                                          {item.recommendedAction}
-                                      </span>
+                                  <div className="flex items-end justify-between pt-4 border-t border-slate-50 mt-auto">
+                                      <div className="flex flex-col gap-3">
+                                          <div className="flex items-center gap-2">
+                                              <Wrench size={14} className="text-slate-400" />
+                                              <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase mr-1">{t.action}:</span>
+                                              <span className="text-xs md:text-sm font-semibold text-slate-700 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                                                  {item.recommendedAction}
+                                              </span>
+                                          </div>
+                                      </div>
+                                      
+                                      <button 
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onTopicClick?.(`${t.tellMeMore} "${item.partName} - ${item.damageType}"`);
+                                        }}
+                                        className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
+                                        data-html2canvas-ignore="true"
+                                      >
+                                          Ask AI <ArrowRight size={14} />
+                                      </button>
                                   </div>
-                              </div>
-                              
-                              <button 
-                                className="flex items-center gap-1 text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors"
-                                data-html2canvas-ignore="true"
-                              >
-                                  Ask AI <ArrowRight size={14} />
-                              </button>
+                             </div>
                           </div>
+                          
+                          {/* Collapsed Preview */}
+                          {!isExpanded && (
+                             <p className="text-slate-500 text-sm leading-relaxed mt-2 line-clamp-2">
+                                {item.description}
+                             </p>
+                          )}
                       </div>
                   </div>
                 </div>
