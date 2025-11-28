@@ -1,4 +1,3 @@
-
 import { TonWalletState } from "../types";
 
 // Declare TonConnectUI on window interface
@@ -11,30 +10,48 @@ declare global {
 let tonConnectUI: any = null;
 const MANIFEST_URL = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonconnect-manifest.json'; 
 
+const waitForScript = async () => {
+    let attempts = 0;
+    while (!window.TonConnectUI && attempts < 50) { // Wait up to 5 seconds
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+    }
+    return !!window.TonConnectUI;
+};
+
+const formatWalletState = (wallet: any): TonWalletState => {
+    return {
+       isConnected: true,
+       address: toUserFriendlyAddress(wallet.account.address),
+       rawAddress: wallet.account.address
+   };
+};
+
 export const initTonConnect = async (
   onStatusChange: (wallet: TonWalletState) => void
 ) => {
-  // Wait for the script to load if it hasn't already
-  let attempts = 0;
-  while (!window.TonConnectUI && attempts < 20) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
+  // Wait for the script to load
+  const isLoaded = await waitForScript();
+  if (!isLoaded) {
+      console.error("TON Connect SDK failed to load.");
+      return;
   }
 
-  if (window.TonConnectUI && !tonConnectUI) {
+  if (!tonConnectUI) {
     try {
         tonConnectUI = new window.TonConnectUI.TonConnectUI({
             manifestUrl: MANIFEST_URL,
         });
 
+        // Check initial state
+        if (tonConnectUI.wallet) {
+            onStatusChange(formatWalletState(tonConnectUI.wallet));
+        }
+
+        // Subscribe to changes
         tonConnectUI.onStatusChange((wallet: any) => {
             if (wallet) {
-                const rawAddress = wallet.account.address;
-                onStatusChange({
-                    isConnected: true,
-                    address: toUserFriendlyAddress(rawAddress),
-                    rawAddress: rawAddress
-                });
+                onStatusChange(formatWalletState(wallet));
             } else {
                 onStatusChange({
                     isConnected: false,
@@ -46,23 +63,37 @@ export const initTonConnect = async (
     } catch (e) {
         console.error("Failed to initialize TonConnectUI", e);
     }
+  } else {
+      // If already initialized, trigger callback with current state
+      if (tonConnectUI.wallet) {
+          onStatusChange(formatWalletState(tonConnectUI.wallet));
+      }
   }
 };
 
 export const connectWallet = async () => {
-  if (tonConnectUI) {
-    try {
-      await tonConnectUI.openModal();
-    } catch (e) {
-      console.error("TON Connect Error", e);
+  if (!tonConnectUI) {
+      // Try to wait one more time in case it's mid-load
+      await waitForScript();
+      if (!tonConnectUI) {
+         console.warn("TonConnectUI not initialized");
+         return;
+      }
+  }
+  
+  try {
+    if (tonConnectUI.connected) {
+        console.log("Already connected");
+        return;
     }
-  } else {
-      console.warn("TonConnectUI not initialized");
+    await tonConnectUI.openModal();
+  } catch (e) {
+    console.error("TON Connect Error", e);
   }
 };
 
 export const disconnectWallet = async () => {
-    if (tonConnectUI) {
+    if (tonConnectUI && tonConnectUI.connected) {
         await tonConnectUI.disconnect();
     }
 };
@@ -77,7 +108,7 @@ export const sendTransaction = async (amountTon: string, comment: string): Promi
     const amountNano = Math.floor(parseFloat(amountTon) * 1000000000).toString();
 
     // Destination address (Smart Contract or Treasury)
-    // Using a valid generic foundation address for simulation/demo purposes if no specific contract
+    // Using a valid generic foundation address for simulation/demo purposes
     const destinationAddress = "0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC";
 
     const transaction = {
@@ -86,9 +117,8 @@ export const sendTransaction = async (amountTon: string, comment: string): Promi
             {
                 address: destinationAddress,
                 amount: amountNano,
-                // Note: To send a text comment on TON, the body needs to be a Cell containing 
-                // the comment opcode (0) and the text. Without @ton/core library in this environment,
-                // we send a basic transfer. The 'comment' arg is preserved for logic extension.
+                // Note: Actual comment encoding to BOC requires @ton/core. 
+                // We send a transfer without comment payload for this demo environment.
             }
         ]
     };
@@ -96,7 +126,7 @@ export const sendTransaction = async (amountTon: string, comment: string): Promi
     try {
         const result = await tonConnectUI.sendTransaction(transaction);
         // Returns { boc: string } on success
-        return result.boc || "simulated_success_hash";
+        return result.boc || "simulated_success_hash_" + Date.now();
     } catch (e) {
         console.error("Transaction failed or rejected", e);
         return null;
@@ -117,5 +147,6 @@ function toUserFriendlyAddress(raw: string): string {
     const parts = raw.split(':');
     if (parts.length < 2) return raw.substring(0, 6) + '...' + raw.substring(raw.length - 4);
     const hash = parts[1];
+    // This is a mock conversion for display. Real conversion requires checksum calc.
     return `EQ${hash.substring(0, 4)}...${hash.substring(hash.length - 4)}`;
 }
