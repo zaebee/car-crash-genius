@@ -14,30 +14,38 @@ const MANIFEST_URL = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonc
 export const initTonConnect = async (
   onStatusChange: (wallet: TonWalletState) => void
 ) => {
-  if (!window.TonConnectUI) {
-      await new Promise(resolve => setTimeout(resolve, 500));
+  // Wait for the script to load if it hasn't already
+  let attempts = 0;
+  while (!window.TonConnectUI && attempts < 20) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
   }
 
   if (window.TonConnectUI && !tonConnectUI) {
-    tonConnectUI = new window.TonConnectUI.TonConnectUI({
-      manifestUrl: MANIFEST_URL,
-    });
+    try {
+        tonConnectUI = new window.TonConnectUI.TonConnectUI({
+            manifestUrl: MANIFEST_URL,
+        });
 
-    tonConnectUI.onStatusChange((wallet: any) => {
-      if (wallet) {
-        onStatusChange({
-          isConnected: true,
-          address: tonConnectUI.account?.address ? toUserFriendlyAddress(tonConnectUI.account.address) : null,
-          rawAddress: tonConnectUI.account?.address || null
+        tonConnectUI.onStatusChange((wallet: any) => {
+            if (wallet) {
+                const rawAddress = wallet.account.address;
+                onStatusChange({
+                    isConnected: true,
+                    address: toUserFriendlyAddress(rawAddress),
+                    rawAddress: rawAddress
+                });
+            } else {
+                onStatusChange({
+                    isConnected: false,
+                    address: null,
+                    rawAddress: null
+                });
+            }
         });
-      } else {
-        onStatusChange({
-          isConnected: false,
-          address: null,
-          rawAddress: null
-        });
-      }
-    });
+    } catch (e) {
+        console.error("Failed to initialize TonConnectUI", e);
+    }
   }
 };
 
@@ -48,6 +56,8 @@ export const connectWallet = async () => {
     } catch (e) {
       console.error("TON Connect Error", e);
     }
+  } else {
+      console.warn("TonConnectUI not initialized");
   }
 };
 
@@ -58,35 +68,37 @@ export const disconnectWallet = async () => {
 };
 
 export const sendTransaction = async (amountTon: string, comment: string): Promise<string | null> => {
-    if (!tonConnectUI || !tonConnectUI.connected) return null;
+    if (!tonConnectUI || !tonConnectUI.connected) {
+        console.error("Wallet not connected");
+        return null;
+    }
 
-    // Convert TON to Nanotons
+    // Convert TON to Nanotons (1 TON = 1,000,000,000 nanotons)
     const amountNano = Math.floor(parseFloat(amountTon) * 1000000000).toString();
 
-    // Use a test address (simulating a smart contract interaction)
-    // In production, this would be your contract address
+    // Destination address (Smart Contract or Treasury)
+    // Using a valid generic foundation address for simulation/demo purposes if no specific contract
     const destinationAddress = "0QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC";
 
     const transaction = {
-        validUntil: Math.floor(Date.now() / 1000) + 300, 
+        validUntil: Math.floor(Date.now() / 1000) + 600, // 10 minutes
         messages: [
             {
                 address: destinationAddress,
                 amount: amountNano,
-                // TonConnect automatically handles text comments in the payload if needed,
-                // but for raw transaction structure we are keeping it simple. 
-                // In a real dApp, you would construct a BOC for a contract method call.
-                // Here we rely on the wallet to attach the comment if supported or just simulate the transfer.
+                // Note: To send a text comment on TON, the body needs to be a Cell containing 
+                // the comment opcode (0) and the text. Without @ton/core library in this environment,
+                // we send a basic transfer. The 'comment' arg is preserved for logic extension.
             }
         ]
     };
 
     try {
         const result = await tonConnectUI.sendTransaction(transaction);
-        // The result might vary based on wallet, but usually contains boc
-        return result.boc || "simulated_hash_success";
+        // Returns { boc: string } on success
+        return result.boc || "simulated_success_hash";
     } catch (e) {
-        console.error("Transaction failed", e);
+        console.error("Transaction failed or rejected", e);
         return null;
     }
 };
@@ -101,8 +113,9 @@ export const generateReportHash = async (data: any): Promise<string> => {
 };
 
 function toUserFriendlyAddress(raw: string): string {
+    if (!raw) return "";
     const parts = raw.split(':');
-    if (parts.length < 2) return raw;
+    if (parts.length < 2) return raw.substring(0, 6) + '...' + raw.substring(raw.length - 4);
     const hash = parts[1];
     return `EQ${hash.substring(0, 4)}...${hash.substring(hash.length - 4)}`;
 }
