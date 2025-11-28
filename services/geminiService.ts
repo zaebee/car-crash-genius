@@ -5,7 +5,7 @@ import { CrashAnalysisResult, UploadedFile, Language, AIModel, ChatSession } fro
 const getGoogleClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key not found in environment variables");
+    throw new Error("GOOGLE_API_KEY_MISSING");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -56,7 +56,10 @@ class MistralChatSession implements ChatSession {
             })
         });
 
-        if (!response.ok) throw new Error("Mistral API Error: " + response.statusText);
+        if (!response.ok) {
+            if (response.status === 401) throw new Error("Invalid Mistral API Key");
+            throw new Error("Mistral API Error: " + response.statusText);
+        }
         if (!response.body) throw new Error("No response body");
 
         const reader = response.body.getReader();
@@ -132,19 +135,42 @@ const CRASH_SCHEMA: Schema = {
 
 // --- Google Generator ---
 const generateGoogleReport = async (parts: any[], modelId: string, langName: string) => {
-    const ai = getGoogleClient();
-    const response = await ai.models.generateContent({
-      model: resolveGoogleModelId(modelId),
-      contents: { parts },
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: CRASH_SCHEMA,
-        systemInstruction: `You are a helpful, professional insurance adjuster. Output all content in ${langName}.`,
-      },
-    });
-    const jsonText = response.text;
-    if (!jsonText) throw new Error("No response from Gemini");
-    return JSON.parse(jsonText);
+    try {
+        const ai = getGoogleClient();
+        const response = await ai.models.generateContent({
+          model: resolveGoogleModelId(modelId),
+          contents: { parts },
+          config: {
+            responseMimeType: "application/json",
+            responseSchema: CRASH_SCHEMA,
+            systemInstruction: `You are a helpful, professional insurance adjuster. Output all content in ${langName}.`,
+          },
+        });
+        const jsonText = response.text;
+        if (!jsonText) throw new Error("EMPTY_RESPONSE");
+        
+        try {
+            return JSON.parse(jsonText);
+        } catch (e) {
+            throw new Error("INVALID_JSON_RESPONSE");
+        }
+    } catch (error: any) {
+        console.error("Google Service Error:", error);
+        
+        if (error.message === "GOOGLE_API_KEY_MISSING") throw new Error("Google API Key configuration is missing.");
+        if (error.message === "EMPTY_RESPONSE") throw new Error("The AI model returned an empty response.");
+        if (error.message === "INVALID_JSON_RESPONSE") throw new Error("Failed to parse the AI report. Please try again.");
+
+        const msg = error.message || '';
+        if (msg.includes('400')) throw new Error("The provided evidence format is not supported or file is corrupted.");
+        if (msg.includes('401') || msg.includes('API key')) throw new Error("Google API Key is invalid.");
+        if (msg.includes('403')) throw new Error("Google API access denied. Check quotas or permissions.");
+        if (msg.includes('429')) throw new Error("Google API usage limit exceeded. Please wait a moment.");
+        if (msg.includes('503') || msg.includes('500')) throw new Error("Google AI service is temporarily unavailable.");
+        if (msg.includes('fetch failed')) throw new Error("Network error. Please check your internet connection.");
+        
+        throw error;
+    }
 };
 
 // --- Mistral Generator ---
@@ -171,27 +197,46 @@ const generateMistralReport = async (prompt: string, files: UploadedFile[], apiK
 
     messages[1].content = contentArr;
 
-    const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-            model: "pixtral-12b-2409", 
-            messages: messages,
-            response_format: { type: "json_object" }
-        })
-    });
+    try {
+        const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: "pixtral-12b-2409", 
+                messages: messages,
+                response_format: { type: "json_object" }
+            })
+        });
 
-    if (!response.ok) {
-        const err = await response.text();
-        throw new Error(`Mistral API Error: ${response.status} - ${err}`);
+        if (!response.ok) {
+            if (response.status === 401) throw new Error("Invalid Mistral API Key.");
+            if (response.status === 429) throw new Error("Mistral rate limit exceeded.");
+            if (response.status >= 500) throw new Error("Mistral service is temporarily unavailable.");
+            const err = await response.text();
+            throw new Error(`Mistral API Error: ${response.status} - ${err}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices[0]?.message?.content;
+        
+        if (!content) throw new Error("EMPTY_MISTRAL_RESPONSE");
+
+        try {
+            return JSON.parse(content);
+        } catch (e) {
+             throw new Error("INVALID_JSON_RESPONSE");
+        }
+    } catch (error: any) {
+        console.error("Mistral Service Error:", error);
+        if (error.message === "EMPTY_MISTRAL_RESPONSE") throw new Error("Mistral returned an empty response.");
+        if (error.message === "INVALID_JSON_RESPONSE") throw new Error("Failed to parse Mistral report.");
+        if (error.message.includes("Failed to fetch")) throw new Error("Network error connecting to Mistral AI.");
+        
+        throw error;
     }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    return JSON.parse(content);
 };
 
 export const generateCrashReport = async (
@@ -319,9 +364,14 @@ export const createChatSession = async (
   // Adapter for Google Chat to match generic ChatSession interface
   return {
       sendMessageStream: async function* (msg: string) {
-          const result = await chat.sendMessageStream({ message: msg });
-          for await (const chunk of result) {
-              yield { text: chunk.text || "" };
+          try {
+            const result = await chat.sendMessageStream({ message: msg });
+            for await (const chunk of result) {
+                yield { text: chunk.text || "" };
+            }
+          } catch (e: any) {
+              if (e.message?.includes('403')) throw new Error("Google API session expired or invalid key.");
+              throw e;
           }
       }
   };

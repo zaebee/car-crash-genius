@@ -40,10 +40,20 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       console.error(err);
-      if (err.message?.includes("MISTRAL_NOT_CONFIGURED") || err.message?.includes("Mistral API Error: 401")) {
-        setError("Invalid or missing Mistral API Key.");
+      
+      // Prefer specific error messages from the service
+      if (err.message && (
+          err.message.includes("API Key") ||
+          err.message.includes("quota") ||
+          err.message.includes("limit") ||
+          err.message.includes("Network") ||
+          err.message.includes("unavailable") ||
+          err.message.includes("supported") ||
+          err.message.includes("MISTRAL_NOT_CONFIGURED")
+      )) {
+         setError(err.message === "MISTRAL_NOT_CONFIGURED" ? "Mistral API Key is required." : err.message);
       } else {
-        setError(t.failedError);
+         setError(t.failedError);
       }
     } finally {
       setIsGenerating(false);
