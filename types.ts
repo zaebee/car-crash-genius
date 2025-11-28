@@ -1,5 +1,15 @@
 export type Language = 'en' | 'ru';
 
+export type ModelProvider = 'google' | 'mistral';
+
+export interface AIModel {
+  id: string;
+  name: string;
+  provider: ModelProvider;
+  description: string;
+  badge?: string;
+}
+
 export interface DamageItem {
   partName: string;
   damageType: string;
@@ -25,4 +35,9 @@ export interface UploadedFile {
   name: string;
   type: string;
   data: string; // base64
+}
+
+// Abstract interface to support both Google SDK Chat and custom Mistral Chat
+export interface ChatSession {
+  sendMessageStream(message: string): AsyncGenerator<{ text: string }>;
 }

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import Sidebar from './components/Sidebar';
+import Sidebar, { AVAILABLE_MODELS } from './components/Sidebar';
 import Timeline from './components/Timeline';
 import ChatInterface from './components/ChatInterface';
-import { CrashAnalysisResult, UploadedFile } from './types';
+import { CrashAnalysisResult, UploadedFile, AIModel } from './types';
 import { generateCrashReport } from './services/geminiService';
 import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
@@ -16,6 +16,10 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestedQuery, setSuggestedQuery] = useState<string>('');
+  
+  // Model & Key State
+  const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
+  const [mistralKey, setMistralKey] = useState<string>('');
 
   const handleGenerate = async (file: UploadedFile | null, text: string) => {
     setIsGenerating(true);
@@ -25,15 +29,19 @@ const App: React.FC = () => {
     setIsSidebarOpen(false); // Close sidebar on mobile after submit
     
     try {
-      const data = await generateCrashReport(file, text, language);
+      const data = await generateCrashReport(file, text, language, selectedModel, mistralKey);
       setMeetingData(data);
       // On desktop open chat automatically, on mobile keep closed to show report first
       if (window.innerWidth >= 768) {
         setIsChatOpen(true);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError(t.failedError);
+      if (err.message?.includes("MISTRAL_NOT_CONFIGURED") || err.message?.includes("Mistral API Error: 401")) {
+        setError("Invalid or missing Mistral API Key.");
+      } else {
+        setError(t.failedError);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -57,6 +65,10 @@ const App: React.FC = () => {
         hasAgenda={!!meetingData}
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
+        selectedModel={selectedModel}
+        onSelectModel={setSelectedModel}
+        mistralKey={mistralKey}
+        onMistralKeyChange={setMistralKey}
       />
 
       {/* Main Content (Center) */}
@@ -181,6 +193,8 @@ const App: React.FC = () => {
                     initialData={meetingData} 
                     file={currentFile} 
                     suggestedQuery={suggestedQuery}
+                    selectedModel={selectedModel}
+                    mistralKey={mistralKey}
                 />
             </div>
             </div>

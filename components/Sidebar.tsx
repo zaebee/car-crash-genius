@@ -1,7 +1,13 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, ImageIcon } from 'lucide-react';
-import { UploadedFile } from '../types';
+import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key } from 'lucide-react';
+import { UploadedFile, AIModel } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+
+export const AVAILABLE_MODELS: AIModel[] = [
+  { id: 'google-pro', name: 'Gemini 3 Pro', provider: 'google', description: 'Deep reasoning', badge: 'Best' },
+  { id: 'google-flash', name: 'Gemini 2.5 Flash', provider: 'google', description: 'High speed' },
+  { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', description: 'Open weights' },
+];
 
 interface SidebarProps {
   onGenerate: (file: UploadedFile | null, text: string) => void;
@@ -9,6 +15,10 @@ interface SidebarProps {
   hasAgenda: boolean;
   isOpen?: boolean;
   onClose?: () => void;
+  selectedModel: AIModel;
+  onSelectModel: (model: AIModel) => void;
+  mistralKey: string;
+  onMistralKeyChange: (key: string) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -16,11 +26,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   isGenerating,
   hasAgenda,
   isOpen = true,
-  onClose
+  onClose,
+  selectedModel,
+  onSelectModel,
+  mistralKey,
+  onMistralKeyChange
 }) => {
   const { t } = useLanguage();
   const [file, setFile] = useState<UploadedFile | null>(null);
   const [textInput, setTextInput] = useState('');
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,6 +100,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     );
   };
 
+  const getProviderIcon = (provider: string) => {
+    return provider === 'google' ? <Sparkles size={16} className="text-blue-400" /> : <Wind size={16} className="text-yellow-400" />;
+  };
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -120,6 +139,84 @@ const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          
+          {/* Model Selector */}
+          <div className="space-y-3 relative">
+            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {t.selectModel}
+            </label>
+            <button 
+              onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+              className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 flex items-center justify-between hover:bg-slate-750 hover:border-slate-600 transition-all text-left"
+            >
+               <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center bg-slate-700/50`}>
+                     {getProviderIcon(selectedModel.provider)}
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-slate-200">{selectedModel.name}</div>
+                    <div className="text-[10px] text-slate-500 uppercase font-medium">{selectedModel.provider === 'google' ? t.providerGoogle : t.providerMistral}</div>
+                  </div>
+               </div>
+               <ChevronDown size={16} className={`text-slate-500 transition-transform ${isModelDropdownOpen ? 'rotate-180' : ''}`} />
+            </button>
+            
+            {/* Dropdown Menu */}
+            {isModelDropdownOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setIsModelDropdownOpen(false)}></div>
+                <div className="absolute top-full left-0 w-full mt-2 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden z-20 flex flex-col p-1 animate-in fade-in zoom-in-95 duration-200">
+                  {AVAILABLE_MODELS.map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => {
+                        onSelectModel(model);
+                        setIsModelDropdownOpen(false);
+                      }}
+                      className={`flex items-center gap-3 p-3 rounded-lg transition-colors text-left group ${
+                        selectedModel.id === model.id ? 'bg-slate-700/50' : 'hover:bg-slate-700/30'
+                      }`}
+                    >
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-slate-900 border border-slate-700/50 shrink-0">
+                          {getProviderIcon(model.provider)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                         <div className="flex items-center justify-between mb-0.5">
+                            <span className={`text-sm font-medium ${selectedModel.id === model.id ? 'text-white' : 'text-slate-300'}`}>
+                              {model.name}
+                            </span>
+                            {model.badge && (
+                              <span className="text-[9px] bg-red-600 text-white px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">{model.badge}</span>
+                            )}
+                         </div>
+                         <p className="text-[10px] text-slate-500">{model.description}</p>
+                      </div>
+                      {selectedModel.id === model.id && <Check size={14} className="text-red-500" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Conditional API Key Input (Mistral only) */}
+          {selectedModel.provider === 'mistral' && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 fade-in duration-300">
+                <label className="text-xs font-semibold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                    <Key size={12} />
+                    {t.enterApiKey}
+                </label>
+                <input 
+                    type="password"
+                    value={mistralKey}
+                    onChange={(e) => onMistralKeyChange(e.target.value)}
+                    placeholder={t.apiKeyPlaceholder}
+                    className="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none placeholder:text-slate-600 transition-all"
+                />
+                <p className="text-[10px] text-slate-500">{t.apiKeyNote}</p>
+            </div>
+          )}
+
           {/* File Upload Section */}
           <div className="space-y-3">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">

@@ -1,22 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Send, Bot, User, ShieldCheck, RefreshCw } from 'lucide-react';
-import { CrashAnalysisResult, UploadedFile, ChatMessage } from '../types';
+import { CrashAnalysisResult, UploadedFile, ChatMessage, AIModel, ChatSession } from '../types';
 import { createChatSession } from '../services/geminiService';
-import { Chat, GenerateContentResponse } from "@google/genai";
 import { useLanguage } from '../contexts/LanguageContext';
+import { AVAILABLE_MODELS } from './Sidebar';
 
 interface ChatInterfaceProps {
   initialData: CrashAnalysisResult;
   file: UploadedFile | null;
   suggestedQuery?: string;
+  selectedModel?: AIModel; // Make optional but use if present
+  mistralKey?: string;
 }
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, suggestedQuery }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, suggestedQuery, selectedModel, mistralKey }) => {
   const { t, language } = useLanguage();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [session, setSession] = useState<Chat | null>(null);
+  const [session, setSession] = useState<ChatSession | null>(null);
   const [isInitializing, setIsInitializing] = useState(true);
   
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -25,13 +27,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
   // Initialize Chat Session
   useEffect(() => {
     // Prevent re-initialization if data or language hasn't changed
-    const dataId = initialData.title + (file?.name || '') + language;
+    const modelId = selectedModel?.id || AVAILABLE_MODELS[0].id;
+    const dataId = initialData.title + (file?.name || '') + language + modelId;
+    
     if (initializedRef.current === dataId) return;
+
+    const modelToUse = selectedModel || AVAILABLE_MODELS[0];
 
     const initSession = async () => {
       setIsInitializing(true);
       try {
-        const chatSession = await createChatSession(initialData, file, language);
+        const chatSession = await createChatSession(initialData, file, language, modelToUse, mistralKey);
         setSession(chatSession);
         setMessages([{ role: 'model', text: t.chatReady.replace("{title}", initialData.title) }]);
         initializedRef.current = dataId;
@@ -44,7 +50,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
     };
 
     initSession();
-  }, [initialData, file, language, t]);
+  }, [initialData, file, language, t, selectedModel, mistralKey]);
 
   // Handle Suggested Query from Timeline
   useEffect(() => {
@@ -74,14 +80,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, file, sugges
       // Add placeholder for model response
       setMessages(prev => [...prev, { role: 'model', text: '' }]);
       
-      const result = await session.sendMessageStream({ message: userText });
+      const result = session.sendMessageStream(userText);
       
       let fullText = '';
       
       for await (const chunk of result) {
-        const text = (chunk as GenerateContentResponse).text;
-        if (text) {
-          fullText += text;
+        if (chunk.text) {
+          fullText += chunk.text;
           setMessages(prev => {
             const newMsgs = [...prev];
             newMsgs[newMsgs.length - 1] = { role: 'model', text: fullText };

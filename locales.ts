@@ -34,6 +34,13 @@ type Translations = {
     severity: string;
     action: string;
     costEst: string;
+    selectModel: string;
+    providerGoogle: string;
+    providerMistral: string;
+    modelError: string;
+    enterApiKey: string;
+    apiKeyPlaceholder: string;
+    apiKeyNote: string;
   }
 };
 
@@ -71,6 +78,13 @@ export const translations: Translations = {
     severity: "Severity",
     action: "Action",
     costEst: "Est. Cost",
+    selectModel: "AI Model",
+    providerGoogle: "Google AI",
+    providerMistral: "Mistral AI",
+    modelError: "Provider not configured. Please select a Google model.",
+    enterApiKey: "Mistral API Key",
+    apiKeyPlaceholder: "Enter key...",
+    apiKeyNote: "Stored locally in browser",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -105,5 +119,12 @@ export const translations: Translations = {
     severity: "Тяжесть",
     action: "Решение",
     costEst: "Оценка ремонта",
+    selectModel: "AI Модель",
+    providerGoogle: "Google AI",
+    providerMistral: "Mistral AI",
+    modelError: "Провайдер не настроен. Пожалуйста, выберите модель Google.",
+    enterApiKey: "Mistral API Key",
+    apiKeyPlaceholder: "Введите ключ...",
+    apiKeyNote: "Хранится локально в браузере",
   }
 };
