@@ -1,3 +1,4 @@
+
 import { Language } from './types';
 
 type Translations = {
@@ -54,6 +55,12 @@ type Translations = {
     analysisReport: string;
     damageVisualization: string;
     interactiveMap: string;
+    fileDetails: string;
+    fileSize: string;
+    dateModified: string;
+    cameraInfo: string;
+    cameraModel: string;
+    cameraSettings: string;
   }
 };
 
@@ -111,6 +118,12 @@ export const translations: Translations = {
     analysisReport: "Analysis Report",
     damageVisualization: "Visual Analysis",
     interactiveMap: "Interactive Damage Map",
+    fileDetails: "File Metadata",
+    fileSize: "Size",
+    dateModified: "Date",
+    cameraInfo: "Camera Info",
+    cameraModel: "Model",
+    cameraSettings: "Shot Settings",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -165,5 +178,11 @@ export const translations: Translations = {
     analysisReport: "Отчет об анализе",
     damageVisualization: "Визуальный анализ",
     interactiveMap: "Интерактивная карта повреждений",
+    fileDetails: "Метаданные файла",
+    fileSize: "Размер",
+    dateModified: "Дата",
+    cameraInfo: "Данные камеры",
+    cameraModel: "Модель",
+    cameraSettings: "Настройки съемки",
   }
 };

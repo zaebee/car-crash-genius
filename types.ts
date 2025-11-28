@@ -1,3 +1,4 @@
+
 export type Language = 'en' | 'ru';
 
 export type ModelProvider = 'google' | 'mistral';
@@ -32,10 +33,22 @@ export interface ChatMessage {
   text: string;
 }
 
+export interface ExifData {
+  make?: string;
+  model?: string;
+  dateTime?: string;
+  fNumber?: string; // Formatted string e.g. "f/1.8"
+  exposureTime?: string; // Formatted string e.g. "1/60"
+  iso?: string;
+}
+
 export interface UploadedFile {
   name: string;
   type: string;
   data: string; // base64
+  size: number;
+  lastModified: number;
+  exif?: ExifData;
 }
 
 // Abstract interface to support both Google SDK Chat and custom Mistral Chat

@@ -1,7 +1,9 @@
+
 import React, { useRef, useState } from 'react';
 import { UploadedFile } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { FileText, Image as ImageIcon, Maximize2, Plus, Upload, X } from 'lucide-react';
+import { processFile } from '../services/fileProcessing';
 
 interface EvidenceViewProps {
   files: UploadedFile[];
@@ -16,29 +18,21 @@ const EvidenceView: React.FC<EvidenceViewProps> = ({ files, onAddFiles }) => {
   const images = files.filter(f => f.type.startsWith('image/'));
   const docs = files.filter(f => !f.type.startsWith('image/'));
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
       const processedFiles: UploadedFile[] = [];
       
-      let processedCount = 0;
-      newFiles.forEach(file => {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              processedFiles.push({
-                name: file.name,
-                type: file.type,
-                data: event.target?.result as string,
-              });
-            }
-            processedCount++;
-            if (processedCount === newFiles.length) {
-                onAddFiles(processedFiles);
-            }
-          };
-          reader.readAsDataURL(file);
-      });
+      for (const file of newFiles) {
+        try {
+            const uploadedFile = await processFile(file);
+            processedFiles.push(uploadedFile);
+        } catch (error) {
+            console.error("Error processing file", file.name, error);
+        }
+      }
+      
+      onAddFiles(processedFiles);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };

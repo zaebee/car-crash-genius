@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye } from 'lucide-react';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap } from 'lucide-react';
 import { CrashAnalysisResult, UploadedFile, DamageItem } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
@@ -12,7 +13,7 @@ interface TimelineProps {
 
 const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAllEvidence }) => {
   const { t } = useLanguage();
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeDamageIndex, setActiveDamageIndex] = useState<number | null>(null);
 
@@ -29,6 +30,14 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
     if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const getSeverityStyles = (severity: string) => {
@@ -250,7 +259,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                     {files.map((file, idx) => (
                         <div 
                             key={idx}
-                            onClick={() => file.type.startsWith('image/') && setPreviewImage(file.data)}
+                            onClick={() => file.type.startsWith('image/') && setPreviewFile(file)}
                             className={`relative w-16 h-16 shrink-0 rounded-lg border border-slate-200 overflow-hidden group cursor-pointer ${!file.type.startsWith('image/') ? 'bg-slate-50 flex flex-col items-center justify-center p-1' : ''}`}
                         >
                             {file.type.startsWith('image/') ? (
@@ -360,24 +369,114 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         </div>
       </div>
 
-      {/* Lightbox Modal */}
-      {previewImage && (
+      {/* Lightbox Modal with Metadata */}
+      {previewFile && (
         <div 
-          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
-          onClick={() => setPreviewImage(null)}
+          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setPreviewFile(null)}
         >
+          {/* Close Button */}
           <button 
-            onClick={() => setPreviewImage(null)}
-            className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+            onClick={() => setPreviewFile(null)}
+            className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md border border-white/10"
           >
             <X size={24} />
           </button>
-          <img 
-            src={previewImage} 
-            alt="Full size evidence" 
-            className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()} 
-          />
+          
+          <div className="relative max-w-5xl w-full flex flex-col items-center">
+             <img 
+                src={previewFile.data} 
+                alt="Full size evidence" 
+                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()} 
+            />
+
+            {/* Metadata Panel */}
+            <div 
+                className="mt-6 w-full max-w-lg mx-auto bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-white shadow-xl animate-in slide-in-from-bottom-4 duration-300"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center gap-2 mb-3 text-white/80 text-xs font-bold uppercase tracking-wider border-b border-white/10 pb-2">
+                    <ImageIcon size={14} />
+                    {t.fileDetails}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-white/50 text-[10px] font-semibold uppercase">
+                            <FileText size={12} />
+                            Filename
+                        </div>
+                        <div className="text-sm font-medium truncate" title={previewFile.name}>
+                            {previewFile.name}
+                        </div>
+                    </div>
+                     <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-white/50 text-[10px] font-semibold uppercase">
+                            <HardDrive size={12} />
+                            {t.fileSize}
+                        </div>
+                        <div className="text-sm font-medium">
+                            {formatFileSize(previewFile.size)}
+                        </div>
+                    </div>
+                    <div className="col-span-2 space-y-1">
+                        <div className="flex items-center gap-1.5 text-white/50 text-[10px] font-semibold uppercase">
+                            <Calendar size={12} />
+                            {t.dateModified}
+                        </div>
+                        <div className="text-sm font-medium">
+                            {new Date(previewFile.lastModified).toLocaleString()}
+                        </div>
+                    </div>
+                </div>
+
+                {/* EXIF Data Section */}
+                {previewFile.exif && (
+                  <>
+                    <div className="flex items-center gap-2 mt-4 mb-3 text-white/80 text-xs font-bold uppercase tracking-wider border-b border-white/10 pb-2">
+                        <Camera size={14} />
+                        {t.cameraInfo}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        {(previewFile.exif.make || previewFile.exif.model) && (
+                            <div className="col-span-2 space-y-1">
+                                <div className="flex items-center gap-1.5 text-white/50 text-[10px] font-semibold uppercase">
+                                    <Camera size={12} />
+                                    {t.cameraModel}
+                                </div>
+                                <div className="text-sm font-medium">
+                                    {previewFile.exif.make} {previewFile.exif.model}
+                                </div>
+                            </div>
+                        )}
+                        {(previewFile.exif.fNumber || previewFile.exif.exposureTime || previewFile.exif.iso) && (
+                             <div className="col-span-2 space-y-1">
+                                <div className="flex items-center gap-1.5 text-white/50 text-[10px] font-semibold uppercase">
+                                    <Aperture size={12} />
+                                    {t.cameraSettings}
+                                </div>
+                                <div className="flex gap-3 text-sm font-medium">
+                                    {previewFile.exif.fNumber && (
+                                        <span className="bg-white/10 px-1.5 py-0.5 rounded">{previewFile.exif.fNumber}</span>
+                                    )}
+                                    {previewFile.exif.exposureTime && (
+                                        <span className="bg-white/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                            <Clock size={10} /> {previewFile.exif.exposureTime}s
+                                        </span>
+                                    )}
+                                    {previewFile.exif.iso && (
+                                        <span className="bg-white/10 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                            <Zap size={10} /> ISO {previewFile.exif.iso}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                  </>
+                )}
+            </div>
+          </div>
         </div>
       )}
     </div>

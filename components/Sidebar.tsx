@@ -1,7 +1,9 @@
+
 import React, { useRef, useState } from 'react';
 import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus } from 'lucide-react';
 import { UploadedFile, AIModel } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { processFile } from '../services/fileProcessing';
 
 export const AVAILABLE_MODELS: AIModel[] = [
   { id: 'google-pro', name: 'Gemini 3 Pro', provider: 'google', description: 'Deep reasoning', badge: 'Best' },
@@ -40,23 +42,21 @@ const Sidebar: React.FC<SidebarProps> = ({
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
+      const processedFiles: UploadedFile[] = [];
+
+      for (const file of newFiles) {
+        try {
+            const uploadedFile = await processFile(file);
+            processedFiles.push(uploadedFile);
+        } catch (error) {
+            console.error("Error processing file", file.name, error);
+        }
+      }
       
-      newFiles.forEach(file => {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            if (event.target?.result) {
-              setFiles(prev => [...prev, {
-                name: file.name,
-                type: file.type,
-                data: event.target?.result as string,
-              }]);
-            }
-          };
-          reader.readAsDataURL(file);
-      });
+      setFiles(prev => [...prev, ...processedFiles]);
       // Reset input to allow selecting same file again
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
