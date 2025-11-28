@@ -1,0 +1,5 @@
+{
+  "name": "CarCrashGenius",
+  "description": "AI-powered independent insurance analysis. Upload crash photos to assess damage, estimate repairs, and generate claims reports.",
+  "requestFramePermissions": []
+}
