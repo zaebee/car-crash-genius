@@ -164,7 +164,7 @@ const App: React.FC = () => {
           )}
 
           {meetingData && !isGenerating && (
-            <Timeline data={meetingData} onTopicClick={handleTopicClick} />
+            <Timeline data={meetingData} onTopicClick={handleTopicClick} file={currentFile} />
           )}
         </main>
       </div>

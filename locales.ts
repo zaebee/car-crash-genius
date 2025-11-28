@@ -41,6 +41,7 @@ type Translations = {
     enterApiKey: string;
     apiKeyPlaceholder: string;
     apiKeyNote: string;
+    exportPdf: string;
   }
 };
 
@@ -85,6 +86,7 @@ export const translations: Translations = {
     enterApiKey: "Mistral API Key",
     apiKeyPlaceholder: "Enter key...",
     apiKeyNote: "Stored locally in browser",
+    exportPdf: "Export PDF",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -126,5 +128,6 @@ export const translations: Translations = {
     enterApiKey: "Mistral API Key",
     apiKeyPlaceholder: "Введите ключ...",
     apiKeyNote: "Хранится локально в браузере",
+    exportPdf: "Скачать PDF",
   }
 };
