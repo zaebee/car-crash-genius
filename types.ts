@@ -11,6 +11,14 @@ export interface AIModel {
   badge?: string;
 }
 
+export interface VehicleDetails {
+  make: string;
+  model: string;
+  year: string;
+  licensePlate: string;
+  color: string;
+}
+
 export interface DamageItem {
   partName: string;
   damageType: string;
@@ -24,6 +32,7 @@ export interface CrashAnalysisResult {
   title: string;
   summary: string;
   vehiclesInvolved: string[];
+  identifiedVehicles?: VehicleDetails[];
   estimatedRepairCostRange: string;
   damagePoints: DamageItem[];
 }

@@ -61,6 +61,11 @@ type Translations = {
     cameraInfo: string;
     cameraModel: string;
     cameraSettings: string;
+    // Vehicle ID
+    identifiedVehicles: string;
+    licensePlate: string;
+    vehicleYear: string;
+    vehicleColor: string;
     // Wallet
     connectWallet: string;
     disconnectWallet: string;
@@ -144,6 +149,10 @@ export const translations: Translations = {
     cameraInfo: "Camera Info",
     cameraModel: "Model",
     cameraSettings: "Shot Settings",
+    identifiedVehicles: "Vehicle Identification",
+    licensePlate: "License Plate",
+    vehicleYear: "Year",
+    vehicleColor: "Color",
     connectWallet: "Connect TON",
     disconnectWallet: "Disconnect",
     premiumCert: "Blockchain Certification",
@@ -222,6 +231,10 @@ export const translations: Translations = {
     cameraInfo: "Данные камеры",
     cameraModel: "Модель",
     cameraSettings: "Настройки съемки",
+    identifiedVehicles: "Идентификация ТС",
+    licensePlate: "Госномер",
+    vehicleYear: "Год",
+    vehicleColor: "Цвет",
     connectWallet: "Подключить TON",
     disconnectWallet: "Отключить",
     premiumCert: "Блокчейн Сертификация",

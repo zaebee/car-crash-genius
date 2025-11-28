@@ -244,21 +244,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               <p className="text-slate-600 text-sm md:text-lg leading-relaxed max-w-3xl mb-5">
                 {data.summary}
               </p>
-              
-              <div className="flex flex-wrap gap-2 items-center">
-                <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mr-1">
-                    <CarFront size={14} />
-                    {t.attendees}
-                </span>
-                {data.vehiclesInvolved.map((vehicle, idx) => (
-                    <span 
-                        key={idx} 
-                        className="inline-flex items-center px-2.5 py-1 rounded-md text-xs md:text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200"
-                    >
-                        {vehicle}
-                    </span>
-                ))}
-              </div>
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 w-full lg:w-64 shrink-0 mt-2 lg:mt-0">
@@ -287,9 +272,54 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               </div>
             </div>
           </div>
+        
+          {/* Identified Vehicles Section */}
+          <div className="mt-8 pt-6 border-t border-slate-100">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <CarFront size={14} />
+                {t.identifiedVehicles}
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+               {/* Prioritize identifiedVehicles if available, fallback to vehiclesInvolved */}
+               {data.identifiedVehicles ? (
+                   data.identifiedVehicles.map((vehicle, idx) => (
+                       <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex gap-3 items-start">
+                           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 shrink-0 shadow-sm">
+                              <CarFront size={20} className="text-slate-400" />
+                           </div>
+                           <div className="min-w-0 flex-1">
+                              <div className="font-bold text-slate-800 text-sm truncate">{vehicle.make} {vehicle.model}</div>
+                              <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
+                                  <span className="bg-white border border-slate-100 px-1.5 py-0.5 rounded text-[10px] font-mono text-slate-600">
+                                     {vehicle.year}
+                                  </span>
+                                  {vehicle.color}
+                              </div>
+                              <div className="mt-2 text-xs font-mono bg-slate-200/50 text-slate-600 px-2 py-1 rounded w-fit border border-slate-200">
+                                 {vehicle.licensePlate !== 'Unknown' && vehicle.licensePlate !== 'Not Visible' ? (
+                                    <span className="font-bold text-slate-800">{vehicle.licensePlate}</span>
+                                 ) : (
+                                    <span className="italic opacity-75">{vehicle.licensePlate}</span>
+                                 )}
+                              </div>
+                           </div>
+                       </div>
+                   ))
+               ) : (
+                   data.vehiclesInvolved.map((vehicle, idx) => (
+                    <span 
+                        key={idx} 
+                        className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200"
+                    >
+                        {vehicle}
+                    </span>
+                   ))
+               )}
+            </div>
+          </div>
 
           {files.length > 0 && (
-            <div className="mt-8 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
+            <div className="mt-6 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
                 <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
                         <ImageIcon size={14} />

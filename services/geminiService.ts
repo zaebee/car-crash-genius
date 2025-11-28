@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type, Schema, Chat } from "@google/genai";
 import { CrashAnalysisResult, UploadedFile, Language, AIModel, ChatSession } from "../types";
 
@@ -112,7 +113,22 @@ const CRASH_SCHEMA: Schema = {
     vehiclesInvolved: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "List of identified vehicle makes/models involved",
+      description: "List of identified vehicle makes/models involved (simple strings)",
+    },
+    identifiedVehicles: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          make: { type: Type.STRING },
+          model: { type: Type.STRING },
+          year: { type: Type.STRING, description: "Estimated year range, e.g. 2018-2020" },
+          licensePlate: { type: Type.STRING, description: "License plate number if visible, or 'Unknown'" },
+          color: { type: Type.STRING }
+        },
+        required: ["make", "model", "year", "licensePlate", "color"]
+      },
+      description: "Detailed list of identified vehicles with specific attributes found in the evidence."
     },
     estimatedRepairCostRange: { type: Type.STRING, description: "Rough estimated cost range (e.g. '$1500 - $2500' or 'Total Loss')" },
     damagePoints: {
@@ -257,11 +273,22 @@ export const generateCrashReport = async (
     You are an expert independent insurance adjuster and automotive engineer. 
     Analyze the provided evidence (images and documents).
     Estimate repair costs and identify damages.
-    IMPORTANT: Output strictly valid JSON matching this structure:
+    
+    IMPORTANT: Identify all vehicles visible. For each vehicle, extracted the License Plate/Registration Number if visible.
+    Estimate the Year, Make, and Model.
+    
+    Output strictly valid JSON matching this structure:
     {
       "title": "string",
       "summary": "string",
       "vehiclesInvolved": ["string"],
+      "identifiedVehicles": [{
+          "make": "string",
+          "model": "string",
+          "year": "string",
+          "licensePlate": "string",
+          "color": "string"
+      }],
       "estimatedRepairCostRange": "string",
       "damagePoints": [{
           "partName": "string", 
