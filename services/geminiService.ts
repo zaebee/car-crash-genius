@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type, Schema, Chat } from "@google/genai";
 import { CrashAnalysisResult, UploadedFile, Language, AIModel, ChatSession } from "../types";
 
@@ -34,10 +33,7 @@ class MistralChatSession implements ChatSession {
   }
 
   async *sendMessageStream(message: string): AsyncGenerator<{ text: string }> {
-    // Add user message to history
     this.history.push({ role: "user", content: message });
-
-    // Prepare messages for Mistral (System + History)
     const messages = [
         { role: "system", content: this.systemInstruction },
         ...this.history
@@ -46,15 +42,8 @@ class MistralChatSession implements ChatSession {
     try {
         const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-                model: this.model,
-                messages: messages,
-                stream: true
-            })
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${this.apiKey}` },
+            body: JSON.stringify({ model: this.model, messages: messages, stream: true })
         });
 
         if (!response.ok) {
@@ -80,7 +69,6 @@ class MistralChatSession implements ChatSession {
                 if (line.startsWith("data: ")) {
                     const dataStr = line.slice(6);
                     if (dataStr.trim() === "[DONE]") continue;
-                    
                     try {
                         const json = JSON.parse(dataStr);
                         const content = json.choices[0]?.delta?.content || "";
@@ -94,9 +82,7 @@ class MistralChatSession implements ChatSession {
                 }
             }
         }
-        // Add model response to history for context
         this.history.push({ role: "assistant", content: fullResponseText });
-
     } catch (e) {
         console.error("Mistral Stream Error", e);
         throw e;
@@ -108,12 +94,12 @@ class MistralChatSession implements ChatSession {
 const CRASH_SCHEMA: Schema = {
   type: Type.OBJECT,
   properties: {
-    title: { type: Type.STRING, description: "A concise title for the accident case (e.g. 'Frontal Impact on Toyota Camry' or 'Court Doc #123 Analysis')" },
-    summary: { type: Type.STRING, description: "A professional summary of the visible damage and accident context derived from photos or documents." },
+    title: { type: Type.STRING, description: "A professional title for the accident case (e.g. 'Frontal Impact Analysis: 2018 Toyota Camry')" },
+    summary: { type: Type.STRING, description: "A professional summary of the visible damage, accident context, and potential hidden damages." },
     vehiclesInvolved: {
       type: Type.ARRAY,
       items: { type: Type.STRING },
-      description: "List of identified vehicle makes/models involved (simple strings)",
+      description: "List of identified vehicle makes/models involved (simple strings for tags)",
     },
     identifiedVehicles: {
       type: Type.ARRAY,
@@ -122,29 +108,29 @@ const CRASH_SCHEMA: Schema = {
         properties: {
           make: { type: Type.STRING },
           model: { type: Type.STRING },
-          year: { type: Type.STRING, description: "Estimated year range, e.g. 2018-2020" },
-          licensePlate: { type: Type.STRING, description: "License plate number if visible, or 'Unknown'" },
+          year: { type: Type.STRING, description: "Estimated year range" },
+          licensePlate: { type: Type.STRING, description: "License plate number or 'Unknown'" },
           color: { type: Type.STRING }
         },
         required: ["make", "model", "year", "licensePlate", "color"]
       },
-      description: "Detailed list of identified vehicles with specific attributes found in the evidence."
+      description: "Detailed list of identified vehicles with specific attributes."
     },
-    estimatedRepairCostRange: { type: Type.STRING, description: "Rough estimated cost range (e.g. '$1500 - $2500' or 'Total Loss')" },
+    estimatedRepairCostRange: { type: Type.STRING, description: "Estimated cost range (e.g. '$1500 - $2500' or 'Total Loss')" },
     damagePoints: {
       type: Type.ARRAY,
       items: {
         type: Type.OBJECT,
         properties: {
           partName: { type: Type.STRING },
-          damageType: { type: Type.STRING, description: "Type of damage (Dent, Scratch, Smash, Misalignment)" },
+          damageType: { type: Type.STRING },
           severity: { type: Type.STRING, enum: ["Low", "Medium", "High", "Critical"] },
-          description: { type: Type.STRING, description: "Detailed description of the damage" },
-          recommendedAction: { type: Type.STRING, description: "Repair vs Replace vs Paint" },
+          description: { type: Type.STRING },
+          recommendedAction: { type: Type.STRING },
           boundingBox: {
             type: Type.ARRAY,
             items: { type: Type.NUMBER },
-            description: "2D bounding box [ymin, xmin, ymax, xmax] normalized to 0-1000 for the FIRST image provided."
+            description: "2D bounding box [ymin, xmin, ymax, xmax] (0-1000 scale) for the FIRST image."
           }
         },
         required: ["partName", "damageType", "severity", "description", "recommendedAction"],
@@ -154,7 +140,7 @@ const CRASH_SCHEMA: Schema = {
   required: ["title", "summary", "vehiclesInvolved", "estimatedRepairCostRange", "damagePoints"],
 };
 
-// --- Google Generator ---
+// --- Generators ---
 const generateGoogleReport = async (parts: any[], modelId: string, langName: string) => {
     try {
         const ai = getGoogleClient();
@@ -164,148 +150,62 @@ const generateGoogleReport = async (parts: any[], modelId: string, langName: str
           config: {
             responseMimeType: "application/json",
             responseSchema: CRASH_SCHEMA,
-            systemInstruction: `You are a helpful, professional insurance adjuster. Output all content in ${langName}.`,
+            systemInstruction: `You are an expert insurance adjuster. Output strictly valid JSON. Language: ${langName}. If images are unclear, make reasonable professional estimates.`,
           },
         });
         const jsonText = response.text;
         if (!jsonText) throw new Error("EMPTY_RESPONSE");
-        
-        try {
-            return JSON.parse(jsonText);
-        } catch (e) {
-            throw new Error("INVALID_JSON_RESPONSE");
-        }
+        return JSON.parse(jsonText);
     } catch (error: any) {
         console.error("Google Service Error:", error);
-        
-        if (error.message === "GOOGLE_API_KEY_MISSING") throw new Error("Google API Key configuration is missing.");
-        if (error.message === "EMPTY_RESPONSE") throw new Error("The AI model returned an empty response.");
-        if (error.message === "INVALID_JSON_RESPONSE") throw new Error("Failed to parse the AI report. Please try again.");
-
         const msg = error.message || '';
-        if (msg.includes('400')) throw new Error("The provided evidence format is not supported or file is corrupted.");
-        if (msg.includes('401') || msg.includes('API key')) throw new Error("Google API Key is invalid.");
-        if (msg.includes('403')) throw new Error("Google API access denied. Check quotas or permissions.");
-        if (msg.includes('429')) throw new Error("Google API usage limit exceeded. Please wait a moment.");
-        if (msg.includes('503') || msg.includes('500')) throw new Error("Google AI service is temporarily unavailable.");
-        if (msg.includes('fetch failed')) throw new Error("Network error. Please check your internet connection.");
-        
+        if (msg.includes('400')) throw new Error("The provided evidence format is not supported.");
+        if (msg.includes('429')) throw new Error("Google API usage limit exceeded.");
         throw error;
     }
 };
 
-// --- Mistral Generator ---
 const generateMistralReport = async (prompt: string, files: UploadedFile[], apiKey: string, langName: string) => {
     let messages: any[] = [
-        { role: "system", content: `You are a helpful insurance adjuster. Output valid JSON only matching the requested schema. Language: ${langName}.` },
+        { role: "system", content: `You are a helpful insurance adjuster. Output valid JSON only matching schema. Language: ${langName}.` },
         { role: "user", content: [] }
     ];
-    
-    // Construct content array
     let contentArr: any[] = [{ type: "text", text: prompt }];
-
-    // Handle multiple files
     files.forEach(file => {
         if (file.type.startsWith('image/')) {
-           contentArr.push({
-               type: "image_url",
-               image_url: { url: file.data } 
-           });
+           contentArr.push({ type: "image_url", image_url: { url: file.data } });
         } else {
-           contentArr.push({ type: "text", text: `[Attached Document: ${file.name} - Mocked as text extraction not available in browser-side Mistral call]` });
+           contentArr.push({ type: "text", text: `[Document: ${file.name}]` });
         }
     });
-
     messages[1].content = contentArr;
 
     try {
         const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${apiKey}`
-            },
-            body: JSON.stringify({
-                model: "pixtral-12b-2409", 
-                messages: messages,
-                response_format: { type: "json_object" }
-            })
+            headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+            body: JSON.stringify({ model: "pixtral-12b-2409", messages: messages, response_format: { type: "json_object" } })
         });
-
-        if (!response.ok) {
-            if (response.status === 401) throw new Error("Invalid Mistral API Key.");
-            if (response.status === 429) throw new Error("Mistral rate limit exceeded.");
-            if (response.status >= 500) throw new Error("Mistral service is temporarily unavailable.");
-            const err = await response.text();
-            throw new Error(`Mistral API Error: ${response.status} - ${err}`);
-        }
-
+        if (!response.ok) throw new Error("Mistral API Error");
         const data = await response.json();
-        const content = data.choices[0]?.message?.content;
-        
-        if (!content) throw new Error("EMPTY_MISTRAL_RESPONSE");
-
-        try {
-            return JSON.parse(content);
-        } catch (e) {
-             throw new Error("INVALID_JSON_RESPONSE");
-        }
-    } catch (error: any) {
+        return JSON.parse(data.choices[0]?.message?.content || "{}");
+    } catch (error) {
         console.error("Mistral Service Error:", error);
-        if (error.message === "EMPTY_MISTRAL_RESPONSE") throw new Error("Mistral returned an empty response.");
-        if (error.message === "INVALID_JSON_RESPONSE") throw new Error("Failed to parse Mistral report.");
-        if (error.message.includes("Failed to fetch")) throw new Error("Network error connecting to Mistral AI.");
-        
         throw error;
     }
 };
 
-export const generateCrashReport = async (
-  files: UploadedFile[],
-  textInput: string,
-  language: Language,
-  model: AIModel,
-  mistralApiKey?: string
-): Promise<CrashAnalysisResult> => {
-  
+export const generateCrashReport = async (files: UploadedFile[], textInput: string, language: Language, model: AIModel, mistralApiKey?: string): Promise<CrashAnalysisResult> => {
   const langName = language === 'ru' ? 'Russian' : 'English';
   const prompt = `
-    You are an expert independent insurance adjuster and automotive engineer. 
-    Analyze the provided evidence (images and documents).
-    Estimate repair costs and identify damages.
+    Analyze the provided evidence (images/docs). Identify damages, vehicle details, and costs.
     
-    IMPORTANT: Identify all vehicles visible. For each vehicle, extracted the License Plate/Registration Number if visible.
-    Estimate the Year, Make, and Model.
+    IMPORTANT: Return valid JSON matching the schema.
+    For 'damagePoints', if you see the damage in the FIRST image, strictly provide 'boundingBox' [ymin, xmin, ymax, xmax] (0-1000).
+    If bounding box is unsure, omit it.
     
-    Output strictly valid JSON matching this structure:
-    {
-      "title": "string",
-      "summary": "string",
-      "vehiclesInvolved": ["string"],
-      "identifiedVehicles": [{
-          "make": "string",
-          "model": "string",
-          "year": "string",
-          "licensePlate": "string",
-          "color": "string"
-      }],
-      "estimatedRepairCostRange": "string",
-      "damagePoints": [{
-          "partName": "string", 
-          "damageType": "string", 
-          "severity": "Low|Medium|High|Critical", 
-          "description": "string", 
-          "recommendedAction": "string",
-          "boundingBox": [ymin, xmin, ymax, xmax] 
-      }]
-    }
-    
-    CRITICAL: For each "damagePoint", you MUST try to identify its location on the FIRST provided image and return a 
-    bounding box as [ymin, xmin, ymax, xmax] normalized to 0-1000 scale. 
-    If you cannot locate it on the first image, omit the boundingBox field.
-    
-    Use ${langName} for text values (titles, descriptions, part names).
-    Additional Context: ${textInput}
+    Language: ${langName}.
+    Context: ${textInput}
   `;
 
   if (model.provider === 'mistral') {
@@ -313,110 +213,38 @@ export const generateCrashReport = async (
      return generateMistralReport(prompt, files, mistralApiKey, langName);
   }
 
-  // Google Logic
   const parts: any[] = [{ text: prompt }];
-  
   files.forEach(file => {
-    const base64Data = file.data.split(',')[1];
-    parts.push({
-      inlineData: {
-        mimeType: file.type,
-        data: base64Data,
-      },
-    });
+    parts.push({ inlineData: { mimeType: file.type, data: file.data.split(',')[1] } });
   });
 
   return generateGoogleReport(parts, model.id, langName);
 };
 
-
-export const createChatSession = async (
-  contextData: CrashAnalysisResult,
-  files: UploadedFile[],
-  language: Language,
-  model: AIModel,
-  mistralApiKey?: string
-): Promise<ChatSession> => {
-  
+export const createChatSession = async (contextData: CrashAnalysisResult, files: UploadedFile[], language: Language, model: AIModel, mistralApiKey?: string): Promise<ChatSession> => {
   const langName = language === 'ru' ? 'Russian' : 'English';
-  
-  const reportContext = `
-    CURRENT CRASH REPORT CONTEXT:
-    Case: "${contextData.title}"
-    Summary: ${contextData.summary}
-    Vehicles: ${contextData.vehiclesInvolved.join(', ')}
-    Est. Cost: ${contextData.estimatedRepairCostRange}
-    Damage Points:
-    ${contextData.damagePoints.map((i, idx) => `${idx + 1}. [${i.severity}] ${i.partName} (${i.damageType}) - ${i.description} -> Action: ${i.recommendedAction}`).join('\n')}
-  `;
+  const reportContext = `CRASH REPORT: ${contextData.title}. Summary: ${contextData.summary}. Costs: ${contextData.estimatedRepairCostRange}.`;
+  const systemInstruction = `You are 'CarCrashGenius Bot', an insurance expert. Use the report context. Respond in ${langName}.`;
 
-  const systemInstruction = `
-    You are a highly intelligent insurance claims expert ("CarCrashGenius Bot").
-    You have access to a damage analysis report generated from crash evidence.
-    Respond strictly in ${langName}. Be objective and professional.
-  `;
-
-  // --- Mistral Session ---
   if (model.provider === 'mistral') {
       if (!mistralApiKey) throw new Error("MISTRAL_NOT_CONFIGURED");
-      
-      const history = [];
-      // Initial context message
-      history.push({ role: 'user', content: `Here is the analysis report:\n${reportContext}` });
-      history.push({ role: 'assistant', content: `Understood. I have the case file for "${contextData.title}". Ready.` });
-
-      return new MistralChatSession(mistralApiKey, "mistral-large-latest", history, systemInstruction);
+      return new MistralChatSession(mistralApiKey, "mistral-large-latest", [{ role: 'user', content: reportContext }], systemInstruction);
   }
 
-  // --- Google Session ---
   const ai = getGoogleClient();
-  const apiModelName = resolveGoogleModelId(model.id);
-  
   const history = [];
-  
-  // Attach all files to initial history
   if (files.length > 0) {
-    const fileParts = files.map(f => ({
-        inlineData: { mimeType: f.type, data: f.data.split(',')[1] }
-    }));
-    
-    history.push({
-      role: 'user',
-      parts: [{ text: "Here is the source evidence." }, ...fileParts],
-    });
-    history.push({
-      role: 'model',
-      parts: [{ text: "I have analyzed the provided evidence." }],
-    });
+    history.push({ role: 'user', parts: [{ text: "Evidence Files" }, ...files.map(f => ({ inlineData: { mimeType: f.type, data: f.data.split(',')[1] } }))] });
+    history.push({ role: 'model', parts: [{ text: "Evidence received." }] });
   }
+  history.push({ role: 'user', parts: [{ text: reportContext }] });
+  history.push({ role: 'model', parts: [{ text: "Ready." }] });
 
-  history.push({
-    role: 'user',
-    parts: [{ text: `Here is the generated damage report:\n${reportContext}` }],
-  });
-  history.push({
-    role: 'model',
-    parts: [{ text: `Understood. I have the case file for "${contextData.title}". How can I assist?` }],
-  });
-
-  const chat = ai.chats.create({
-    model: apiModelName,
-    config: { systemInstruction },
-    history: history,
-  });
-
-  // Adapter for Google Chat to match generic ChatSession interface
+  const chat = ai.chats.create({ model: resolveGoogleModelId(model.id), config: { systemInstruction }, history });
   return {
       sendMessageStream: async function* (msg: string) {
-          try {
-            const result = await chat.sendMessageStream({ message: msg });
-            for await (const chunk of result) {
-                yield { text: chunk.text || "" };
-            }
-          } catch (e: any) {
-              if (e.message?.includes('403')) throw new Error("Google API session expired or invalid key.");
-              throw e;
-          }
+          const result = await chat.sendMessageStream({ message: msg });
+          for await (const chunk of result) yield { text: chunk.text || "" };
       }
   };
 };
