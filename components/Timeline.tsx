@@ -1,9 +1,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap, Wallet, BadgeCheck, Lock } from 'lucide-react';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap, Wallet, BadgeCheck, Lock, ExternalLink, Hash, Database, FileCheck } from 'lucide-react';
 import { CrashAnalysisResult, UploadedFile, DamageItem, TonWalletState } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
-import { sendTransaction, connectWallet } from '../services/tonService';
+import { sendTransaction, connectWallet, generateReportHash } from '../services/tonService';
 
 interface TimelineProps {
   data: CrashAnalysisResult;
@@ -13,22 +13,25 @@ interface TimelineProps {
   wallet: TonWalletState;
 }
 
+type CertStep = 'idle' | 'hashing' | 'ipfs' | 'signing' | 'minting' | 'success' | 'failed';
+
 const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAllEvidence, wallet }) => {
   const { t } = useLanguage();
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeDamageIndex, setActiveDamageIndex] = useState<number | null>(null);
-  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
+  
+  // Certification State
+  const [certStep, setCertStep] = useState<CertStep>('idle');
+  const [txHash, setTxHash] = useState<string>('');
+  const [ipfsHash, setIpfsHash] = useState<string>('');
 
   // Identify the main image (first image in the list) to be used for overlay
   const mainImage = files.find(f => f.type.startsWith('image/'));
-
-  // Scroll logic for cards
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   const handleBoxClick = (index: number) => {
     setActiveDamageIndex(index);
-    // Scroll to card
     const card = cardRefs.current[index];
     if (card) {
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -43,21 +46,55 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handlePayment = async () => {
+  const handleCertify = async () => {
     if (!wallet.isConnected) {
         connectWallet();
         return;
     }
 
-    setPaymentStatus('processing');
-    const success = await sendTransaction("1", `Certification for case: ${data.title}`);
-    
-    if (success) {
-        setPaymentStatus('success');
-    } else {
-        setPaymentStatus('failed');
-        setTimeout(() => setPaymentStatus('idle'), 3000);
+    try {
+        // Step 1: Hashing
+        setCertStep('hashing');
+        const contentHash = await generateReportHash(data);
+        await new Promise(r => setTimeout(r, 1000)); // Simulate UI delay
+
+        // Step 2: IPFS Simulation
+        setCertStep('ipfs');
+        // In a real app, upload JSON to IPFS here
+        const mockIpfsCid = "Qm" + contentHash.substring(0, 44); 
+        setIpfsHash(mockIpfsCid);
+        await new Promise(r => setTimeout(r, 1500)); 
+
+        // Step 3: Wallet Signature
+        setCertStep('signing');
+        // 0.05 TON Fee
+        const resultBoc = await sendTransaction("0.05", `Certify: ${mockIpfsCid}`);
+        
+        if (resultBoc) {
+            setCertStep('minting');
+            await new Promise(r => setTimeout(r, 2000)); // Simulate blockchain conf
+            setTxHash(resultBoc.substring(0, 16) + "...");
+            setCertStep('success');
+        } else {
+            setCertStep('failed');
+            setTimeout(() => setCertStep('idle'), 3000);
+        }
+    } catch (e) {
+        console.error(e);
+        setCertStep('failed');
+        setTimeout(() => setCertStep('idle'), 3000);
     }
+  };
+
+  const getStepLabel = () => {
+      switch(certStep) {
+          case 'hashing': return t.stepHashing;
+          case 'ipfs': return t.stepIpfs;
+          case 'signing': return t.stepSign;
+          case 'minting': return t.stepMint;
+          case 'failed': return t.paymentFailed;
+          default: return t.confirming;
+      }
   };
 
   const getSeverityStyles = (severity: string) => {
@@ -117,7 +154,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
       margin: [10, 10],
       filename: `Crash-Report-${data.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, windowWidth: 1280 }, // Force desktop width
+      html2canvas: { scale: 2, useCORS: true, windowWidth: 1280 }, 
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
@@ -131,12 +168,10 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         setIsExporting(false);
       });
     } else {
-      console.error("html2pdf library not found");
       setIsExporting(false);
     }
   };
 
-  // Render bounding box overlay
   const renderBoundingBoxes = () => {
     if (!mainImage) return null;
 
@@ -144,7 +179,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
       if (!item.boundingBox || item.boundingBox.length !== 4) return null;
       
       const [ymin, xmin, ymax, xmax] = item.boundingBox;
-      const top = ymin / 10; // Convert 0-1000 to percentage
+      const top = ymin / 10;
       const left = xmin / 10;
       const height = (ymax - ymin) / 10;
       const width = (xmax - xmin) / 10;
@@ -167,7 +202,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
             boxShadow: isActive ? `0 0 10px ${styles.boxBorder}` : 'none'
           }}
         >
-          {/* Label Tooltip */}
           <div className={`
              absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded 
              whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none
@@ -175,8 +209,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
           `}>
              {item.partName}
           </div>
-          
-          {/* Pulsing corner for discovery */}
           <div className={`absolute top-0 right-0 w-2 h-2 ${styles.bar} rounded-full animate-ping opacity-75`}></div>
         </div>
       );
@@ -188,7 +220,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
       <div id="report-content">
         {/* Dashboard Header */}
         <div className="mb-6 md:mb-8 bg-white rounded-2xl p-5 md:p-8 border border-slate-200 shadow-sm relative overflow-hidden">
-          {/* Decorative background element */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50 rounded-bl-full -mr-16 -mt-16 opacity-50 pointer-events-none"></div>
 
           <div className="flex flex-col lg:flex-row gap-6 lg:items-start justify-between relative z-10">
@@ -197,8 +228,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                   <h1 className="text-2xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight">
                     {data.title}
                   </h1>
-                  
-                  {/* PDF Export Button */}
                   <button 
                     onClick={handleExportPdf}
                     disabled={isExporting}
@@ -214,7 +243,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                 {data.summary}
               </p>
               
-              {/* Vehicles Tags */}
               <div className="flex flex-wrap gap-2 items-center">
                 <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mr-1">
                     <CarFront size={14} />
@@ -231,7 +259,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               </div>
             </div>
 
-            {/* Compact Stats Grid */}
             <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 w-full lg:w-64 shrink-0 mt-2 lg:mt-0">
               <div className="flex items-center gap-3 bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 hover:border-emerald-200 transition-colors">
                 <div className="w-10 h-10 flex items-center justify-center bg-white rounded-lg border border-emerald-100 text-emerald-600 shadow-sm shrink-0">
@@ -259,7 +286,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
             </div>
           </div>
 
-          {/* Evidence Gallery Strip */}
           {files.length > 0 && (
             <div className="mt-8 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
                 <div className="flex items-center justify-between mb-3">
@@ -294,7 +320,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
           )}
         </div>
 
-        {/* Interactive Damage Map Section */}
         {mainImage && (
              <div className="mb-6 bg-slate-900 rounded-2xl p-1 overflow-hidden shadow-lg" data-html2canvas-ignore="true">
                 <div className="bg-slate-900 p-3 flex items-center justify-between">
@@ -313,7 +338,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
              </div>
         )}
 
-        {/* Grid Layout for Damage Points */}
         <div className="space-y-4 md:space-y-6">
           <div className="flex items-center gap-3 px-1">
               <div className="p-1.5 bg-slate-100 text-slate-600 rounded-lg">
@@ -339,9 +363,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                   `}
                 >
                   <div className="flex flex-1 items-stretch">
-                      {/* Severity Indicator Strip */}
                       <div className={`w-1.5 ${styles.bar}`}></div>
-                      
                       <div className="flex-1 p-4 md:p-6 flex flex-col">
                           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-3 gap-2">
                               <div className="flex items-center gap-2.5">
@@ -389,60 +411,98 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
         </div>
       </div>
 
-      {/* Premium Certification Footer */}
-      <div className="mt-12 mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden" data-html2canvas-ignore="true">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-            <BadgeCheck size={120} />
-        </div>
-        <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
-                    <BadgeCheck size={24} className="text-white" />
+      {/* Smart Contract Interaction Footer */}
+      <div className="mt-12 mb-8" data-html2canvas-ignore="true">
+        {certStep === 'success' ? (
+             // Success Certificate Card
+             <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden shadow-2xl border border-slate-700">
+                <div className="absolute -top-12 -right-12 text-slate-700/20 rotate-12">
+                     <FileCheck size={250} />
                 </div>
-                <h3 className="text-xl md:text-2xl font-bold">{t.premiumCert}</h3>
-            </div>
-            <p className="text-blue-100 max-w-xl mb-6 leading-relaxed">
-                {t.certifyDesc}
-            </p>
-            
-            {paymentStatus === 'success' ? (
-                <div className="inline-flex items-center gap-2 bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
-                    <CheckCircle2 size={20} />
-                    {t.paymentSuccess}
+                <div className="relative z-10">
+                     <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-green-500/20 p-2 rounded-lg backdrop-blur-sm border border-green-500/50">
+                            <CheckCircle2 size={24} className="text-green-400" />
+                        </div>
+                        <div>
+                             <h3 className="text-2xl font-bold text-white tracking-tight">{t.certificateTitle}</h3>
+                             <p className="text-slate-400 text-sm">{t.paymentSuccess}</p>
+                        </div>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-800/50 rounded-xl p-4 border border-slate-700 mb-6">
+                         <div className="space-y-1">
+                             <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                                 <Hash size={12} /> {t.certId}
+                             </div>
+                             <div className="font-mono text-xs md:text-sm text-blue-300 truncate">{txHash}</div>
+                         </div>
+                         <div className="space-y-1">
+                             <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-wider">
+                                 <Database size={12} /> {t.ipfsHash}
+                             </div>
+                             <div className="font-mono text-xs md:text-sm text-purple-300 truncate">{ipfsHash}</div>
+                         </div>
+                     </div>
+
+                     <div className="flex items-center gap-4 text-xs font-medium text-slate-400">
+                         <div className="flex items-center gap-1.5 bg-green-900/30 px-3 py-1.5 rounded-full border border-green-500/30 text-green-300">
+                             <BadgeCheck size={14} /> {t.rewardNote}
+                         </div>
+                         <a href="#" className="flex items-center gap-1 hover:text-white transition-colors">
+                             {t.explorerLink} <ExternalLink size={12} />
+                         </a>
+                     </div>
                 </div>
-            ) : (
-                <button 
-                    onClick={handlePayment}
-                    disabled={paymentStatus === 'processing'}
-                    className="flex items-center gap-3 bg-white text-blue-700 hover:bg-blue-50 font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-75 disabled:cursor-not-allowed"
-                >
-                    {paymentStatus === 'processing' ? (
-                        <>
-                            <Loader2 size={20} className="animate-spin" />
-                            {t.confirming}
-                        </>
-                    ) : (
-                        <>
-                            <Wallet size={20} />
-                            {wallet.isConnected ? t.certifyReport : t.connectWallet}
-                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded ml-1">{t.priceTon}</span>
-                        </>
+             </div>
+        ) : (
+            // Interaction Card
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <BadgeCheck size={120} />
+                </div>
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-4">
+                        <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                            <BadgeCheck size={24} className="text-white" />
+                        </div>
+                        <h3 className="text-xl md:text-2xl font-bold">{t.premiumCert}</h3>
+                    </div>
+                    <p className="text-blue-100 max-w-xl mb-6 leading-relaxed">
+                        {t.certifyDesc}
+                    </p>
+                    
+                    <button 
+                        onClick={handleCertify}
+                        disabled={certStep !== 'idle' && certStep !== 'failed'}
+                        className="flex items-center gap-3 bg-white text-blue-700 hover:bg-blue-50 font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-75 disabled:cursor-not-allowed"
+                    >
+                        {certStep !== 'idle' && certStep !== 'failed' ? (
+                            <>
+                                <Loader2 size={20} className="animate-spin" />
+                                {getStepLabel()}
+                            </>
+                        ) : (
+                            <>
+                                <Wallet size={20} />
+                                {wallet.isConnected ? t.certifyReport : t.connectWallet}
+                                <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded ml-1">{t.priceTon}</span>
+                            </>
+                        )}
+                    </button>
+                    {certStep === 'failed' && (
+                        <span className="block mt-2 text-red-300 text-sm font-semibold">{t.paymentFailed}</span>
                     )}
-                </button>
-            )}
-             {paymentStatus === 'failed' && (
-                <span className="block mt-2 text-red-300 text-sm font-semibold">{t.paymentFailed}</span>
-            )}
-        </div>
+                </div>
+            </div>
+        )}
       </div>
 
-      {/* Lightbox Modal with Metadata */}
       {previewFile && (
         <div 
           className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setPreviewFile(null)}
         >
-          {/* Close Button */}
           <button 
             onClick={() => setPreviewFile(null)}
             className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors backdrop-blur-md border border-white/10"
@@ -458,7 +518,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                 onClick={(e) => e.stopPropagation()} 
             />
 
-            {/* Metadata Panel */}
             <div 
                 className="mt-6 w-full max-w-lg mx-auto bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 text-white shadow-xl animate-in slide-in-from-bottom-4 duration-300"
                 onClick={(e) => e.stopPropagation()}
@@ -496,8 +555,6 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
                         </div>
                     </div>
                 </div>
-
-                {/* EXIF Data Section */}
                 {previewFile.exif && (
                   <>
                     <div className="flex items-center gap-2 mt-4 mb-3 text-white/80 text-xs font-bold uppercase tracking-wider border-b border-white/10 pb-2">

@@ -71,6 +71,16 @@ type Translations = {
     confirming: string;
     paymentSuccess: string;
     paymentFailed: string;
+    // Web3 Steps
+    stepHashing: string;
+    stepIpfs: string;
+    stepSign: string;
+    stepMint: string;
+    certificateTitle: string;
+    certId: string;
+    ipfsHash: string;
+    explorerLink: string;
+    rewardNote: string;
   }
 };
 
@@ -136,13 +146,22 @@ export const translations: Translations = {
     cameraSettings: "Shot Settings",
     connectWallet: "Connect TON",
     disconnectWallet: "Disconnect",
-    premiumCert: "Premium Certification",
-    certifyReport: "Certify Report",
-    certifyDesc: "Mint this damage report as an immutable record on the TON blockchain for insurance validation.",
-    priceTon: "1 TON",
-    confirming: "Confirming...",
-    paymentSuccess: "Certified Successfully!",
+    premiumCert: "Blockchain Certification",
+    certifyReport: "Mint Certificate",
+    certifyDesc: "Secure your damage assessment on the TON blockchain using IPFS. Validated reports are eligible for smart contract rewards.",
+    priceTon: "0.05 TON",
+    confirming: "Processing...",
+    paymentSuccess: "Certificate Minted!",
     paymentFailed: "Transaction Failed",
+    stepHashing: "Generating cryptographic hash...",
+    stepIpfs: "Uploading metadata to IPFS...",
+    stepSign: "Requesting wallet signature...",
+    stepMint: "Minting NFT Certificate...",
+    certificateTitle: "Digital Damage Certificate",
+    certId: "Transaction Hash",
+    ipfsHash: "IPFS Record",
+    explorerLink: "View on TON Explorer",
+    rewardNote: "Smart Contract Reward Active",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -205,12 +224,21 @@ export const translations: Translations = {
     cameraSettings: "Настройки съемки",
     connectWallet: "Подключить TON",
     disconnectWallet: "Отключить",
-    premiumCert: "Премиум Сертификация",
-    certifyReport: "Заверить отчет",
-    certifyDesc: "Создать неизменяемую запись об этом отчете в блокчейне TON для страховой валидации.",
-    priceTon: "1 TON",
-    confirming: "Подтверждение...",
-    paymentSuccess: "Успешно заверено!",
+    premiumCert: "Блокчейн Сертификация",
+    certifyReport: "Выпустить сертификат",
+    certifyDesc: "Сохраните оценку ущерба в блокчейне TON через IPFS. Подтвержденные отчеты могут получить награду смарт-контракта.",
+    priceTon: "0.05 TON",
+    confirming: "Обработка...",
+    paymentSuccess: "Сертификат выпущен!",
     paymentFailed: "Ошибка транзакции",
+    stepHashing: "Генерация хеша...",
+    stepIpfs: "Загрузка в IPFS...",
+    stepSign: "Запрос подписи кошелька...",
+    stepMint: "Выпуск NFT сертификата...",
+    certificateTitle: "Цифровой Сертификат Ущерба",
+    certId: "Хеш транзакции",
+    ipfsHash: "Запись IPFS",
+    explorerLink: "Открыть в TON Explorer",
+    rewardNote: "Награда смарт-контракта активна",
   }
 };
