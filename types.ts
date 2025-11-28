@@ -51,6 +51,12 @@ export interface UploadedFile {
   exif?: ExifData;
 }
 
+export interface TonWalletState {
+    isConnected: boolean;
+    address: string | null; // User friendly address
+    rawAddress: string | null;
+}
+
 // Abstract interface to support both Google SDK Chat and custom Mistral Chat
 export interface ChatSession {
   sendMessageStream(message: string): AsyncGenerator<{ text: string }>;

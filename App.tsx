@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import Sidebar, { AVAILABLE_MODELS } from './components/Sidebar';
 import Timeline from './components/Timeline';
 import ChatInterface from './components/ChatInterface';
 import EvidenceView from './components/EvidenceView';
-import { CrashAnalysisResult, UploadedFile, AIModel } from './types';
+import { CrashAnalysisResult, UploadedFile, AIModel, TonWalletState } from './types';
 import { generateCrashReport } from './services/geminiService';
 import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu, FileText } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
+import { initTonConnect } from './services/tonService';
 
 const App: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
@@ -22,6 +24,20 @@ const App: React.FC = () => {
   // Model & Key State
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
   const [mistralKey, setMistralKey] = useState<string>('');
+
+  // Wallet State
+  const [walletState, setWalletState] = useState<TonWalletState>({
+    isConnected: false,
+    address: null,
+    rawAddress: null
+  });
+
+  useEffect(() => {
+    // Initialize TON Connect on mount
+    initTonConnect((wallet) => {
+      setWalletState(wallet);
+    });
+  }, []);
 
   const handleGenerate = async (files: UploadedFile[], text: string) => {
     setIsGenerating(true);
@@ -94,6 +110,7 @@ const App: React.FC = () => {
         mistralKey={mistralKey}
         onMistralKeyChange={setMistralKey}
         onLogoClick={navigateToEvidence}
+        wallet={walletState}
       />
 
       {/* Main Content (Center) */}
@@ -206,6 +223,7 @@ const App: React.FC = () => {
                     onTopicClick={handleTopicClick} 
                     files={currentFiles} 
                     onViewAllEvidence={() => setActiveView('evidence')}
+                    wallet={walletState}
                 />
               ) : (
                 <EvidenceView files={currentFiles} onAddFiles={handleAddFiles} />

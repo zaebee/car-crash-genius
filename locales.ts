@@ -61,6 +61,16 @@ type Translations = {
     cameraInfo: string;
     cameraModel: string;
     cameraSettings: string;
+    // Wallet
+    connectWallet: string;
+    disconnectWallet: string;
+    premiumCert: string;
+    certifyReport: string;
+    certifyDesc: string;
+    priceTon: string;
+    confirming: string;
+    paymentSuccess: string;
+    paymentFailed: string;
   }
 };
 
@@ -124,6 +134,15 @@ export const translations: Translations = {
     cameraInfo: "Camera Info",
     cameraModel: "Model",
     cameraSettings: "Shot Settings",
+    connectWallet: "Connect TON",
+    disconnectWallet: "Disconnect",
+    premiumCert: "Premium Certification",
+    certifyReport: "Certify Report",
+    certifyDesc: "Mint this damage report as an immutable record on the TON blockchain for insurance validation.",
+    priceTon: "1 TON",
+    confirming: "Confirming...",
+    paymentSuccess: "Certified Successfully!",
+    paymentFailed: "Transaction Failed",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -184,5 +203,14 @@ export const translations: Translations = {
     cameraInfo: "Данные камеры",
     cameraModel: "Модель",
     cameraSettings: "Настройки съемки",
+    connectWallet: "Подключить TON",
+    disconnectWallet: "Отключить",
+    premiumCert: "Премиум Сертификация",
+    certifyReport: "Заверить отчет",
+    certifyDesc: "Создать неизменяемую запись об этом отчете в блокчейне TON для страховой валидации.",
+    priceTon: "1 TON",
+    confirming: "Подтверждение...",
+    paymentSuccess: "Успешно заверено!",
+    paymentFailed: "Ошибка транзакции",
   }
 };

@@ -1,9 +1,10 @@
 
 import React, { useRef, useState } from 'react';
-import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus } from 'lucide-react';
-import { UploadedFile, AIModel } from '../types';
+import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus, Wallet, LogOut } from 'lucide-react';
+import { UploadedFile, AIModel, TonWalletState } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { processFile } from '../services/fileProcessing';
+import { connectWallet, disconnectWallet } from '../services/tonService';
 
 export const AVAILABLE_MODELS: AIModel[] = [
   { id: 'google-pro', name: 'Gemini 3 Pro', provider: 'google', description: 'Deep reasoning', badge: 'Best' },
@@ -22,6 +23,7 @@ interface SidebarProps {
   mistralKey: string;
   onMistralKeyChange: (key: string) => void;
   onLogoClick?: () => void;
+  wallet: TonWalletState;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -34,7 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSelectModel,
   mistralKey,
   onMistralKeyChange,
-  onLogoClick
+  onLogoClick,
+  wallet
 }) => {
   const { t } = useLanguage();
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -114,6 +117,34 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-8">
           
+          {/* TON Wallet Connect */}
+          <div className="space-y-3">
+             {wallet.isConnected ? (
+                <div className="bg-slate-800 border border-blue-500/30 rounded-xl p-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                           <Wallet size={16} />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider">TON Connected</span>
+                            <span className="text-sm font-mono text-slate-200">{wallet.address}</span>
+                        </div>
+                    </div>
+                    <button onClick={disconnectWallet} className="text-slate-500 hover:text-white p-1">
+                        <LogOut size={16} />
+                    </button>
+                </div>
+             ) : (
+                <button 
+                    onClick={connectWallet}
+                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-900/20"
+                >
+                    <Wallet size={18} />
+                    {t.connectWallet}
+                </button>
+             )}
+          </div>
+
           {/* Model Selector */}
           <div className="space-y-3 relative">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">

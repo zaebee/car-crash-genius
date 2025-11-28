@@ -1,21 +1,24 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap } from 'lucide-react';
-import { CrashAnalysisResult, UploadedFile, DamageItem } from '../types';
+import { CircleDollarSign, Wrench, AlertOctagon, CarFront, ChevronRight, Activity, ArrowRight, Maximize2, X, Image as ImageIcon, Download, Loader2, AlertTriangle, CheckCircle2, AlertCircle, FileText, ScanEye, Calendar, HardDrive, Camera, Aperture, Clock, Zap, Wallet, BadgeCheck, Lock } from 'lucide-react';
+import { CrashAnalysisResult, UploadedFile, DamageItem, TonWalletState } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
+import { sendTransaction, connectWallet } from '../services/tonService';
 
 interface TimelineProps {
   data: CrashAnalysisResult;
   files: UploadedFile[];
   onTopicClick?: (topic: string) => void;
   onViewAllEvidence?: () => void;
+  wallet: TonWalletState;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAllEvidence }) => {
+const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAllEvidence, wallet }) => {
   const { t } = useLanguage();
   const [previewFile, setPreviewFile] = useState<UploadedFile | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [activeDamageIndex, setActiveDamageIndex] = useState<number | null>(null);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'success' | 'failed'>('idle');
 
   // Identify the main image (first image in the list) to be used for overlay
   const mainImage = files.find(f => f.type.startsWith('image/'));
@@ -38,6 +41,23 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const handlePayment = async () => {
+    if (!wallet.isConnected) {
+        connectWallet();
+        return;
+    }
+
+    setPaymentStatus('processing');
+    const success = await sendTransaction("1", `Certification for case: ${data.title}`);
+    
+    if (success) {
+        setPaymentStatus('success');
+    } else {
+        setPaymentStatus('failed');
+        setTimeout(() => setPaymentStatus('idle'), 3000);
+    }
   };
 
   const getSeverityStyles = (severity: string) => {
@@ -366,6 +386,53 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               );
             })}
           </div>
+        </div>
+      </div>
+
+      {/* Premium Certification Footer */}
+      <div className="mt-12 mb-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-2xl p-6 md:p-8 text-white relative overflow-hidden" data-html2canvas-ignore="true">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+            <BadgeCheck size={120} />
+        </div>
+        <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="bg-white/20 p-2 rounded-lg backdrop-blur-sm">
+                    <BadgeCheck size={24} className="text-white" />
+                </div>
+                <h3 className="text-xl md:text-2xl font-bold">{t.premiumCert}</h3>
+            </div>
+            <p className="text-blue-100 max-w-xl mb-6 leading-relaxed">
+                {t.certifyDesc}
+            </p>
+            
+            {paymentStatus === 'success' ? (
+                <div className="inline-flex items-center gap-2 bg-green-500 text-white font-bold py-3 px-6 rounded-xl shadow-lg">
+                    <CheckCircle2 size={20} />
+                    {t.paymentSuccess}
+                </div>
+            ) : (
+                <button 
+                    onClick={handlePayment}
+                    disabled={paymentStatus === 'processing'}
+                    className="flex items-center gap-3 bg-white text-blue-700 hover:bg-blue-50 font-bold py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-75 disabled:cursor-not-allowed"
+                >
+                    {paymentStatus === 'processing' ? (
+                        <>
+                            <Loader2 size={20} className="animate-spin" />
+                            {t.confirming}
+                        </>
+                    ) : (
+                        <>
+                            <Wallet size={20} />
+                            {wallet.isConnected ? t.certifyReport : t.connectWallet}
+                            <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded ml-1">{t.priceTon}</span>
+                        </>
+                    )}
+                </button>
+            )}
+             {paymentStatus === 'failed' && (
+                <span className="block mt-2 text-red-300 text-sm font-semibold">{t.paymentFailed}</span>
+            )}
         </div>
       </div>
 
