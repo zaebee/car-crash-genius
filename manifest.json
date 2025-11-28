@@ -1,0 +1,15 @@
+{
+  "short_name": "CrashGenius",
+  "name": "CarCrashGenius AI Adjuster",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#dc2626",
+  "background_color": "#f8fafc"
+}

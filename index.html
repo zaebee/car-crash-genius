@@ -2,8 +2,45 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CarCrashGenius</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <!-- Primary Meta Tags -->
+    <title>CarCrashGenius - AI Insurance Adjuster</title>
+    <meta name="title" content="CarCrashGenius - AI Insurance Adjuster">
+    <meta name="description" content="AI-powered independent insurance analysis. Upload crash photos to assess damage, estimate repairs, identify vehicles, and certify reports on the TON blockchain.">
+    <meta name="keywords" content="AI, Car Crash, Insurance, Estimate, Gemini, Mistral, TON, Blockchain, Claims, Auto Repair">
+    <meta name="author" content="Zae Life">
+    <meta name="theme-color" content="#dc2626">
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json">
+
+    <!-- Canonical & Languages -->
+    <link rel="canonical" href="https://car.zae.life" />
+    <link rel="alternate" hreflang="en" href="https://car.zae.life?lang=en" />
+    <link rel="alternate" hreflang="ru" href="https://car.zae.life?lang=ru" />
+    <link rel="alternate" hreflang="x-default" href="https://car.zae.life" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://car.zae.life/">
+    <meta property="og:title" content="CarCrashGenius - AI Insurance Adjuster">
+    <meta property="og:description" content="Instant AI car damage analysis. Upload photos, get repair estimates, and certify your claim on the blockchain.">
+    <meta property="og:image" content="https://car.zae.life/og-image.jpg">
+    <meta property="og:site_name" content="CarCrashGenius">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://car.zae.life/">
+    <meta property="twitter:title" content="CarCrashGenius - AI Insurance Adjuster">
+    <meta property="twitter:description" content="Instant AI car damage analysis. Upload photos, get repair estimates, and certify your claim on the blockchain.">
+    <meta property="twitter:image" content="https://car.zae.life/og-image.jpg">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+    <!-- Scripts & Styles -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
@@ -11,6 +48,7 @@
     <style>
       body {
         font-family: 'Inter', sans-serif;
+        overscroll-behavior-y: none; /* Prevent pull-to-refresh on mobile */
       }
       /* Custom scrollbar for webkit */
       ::-webkit-scrollbar {
@@ -27,6 +65,13 @@
       ::-webkit-scrollbar-thumb:hover {
         background: #94a3b8;
       }
+      .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+      }
+      .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+      }
     </style>
   <script type="importmap">
 {
@@ -40,7 +85,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-50 text-slate-900 h-screen overflow-hidden">
+  <body class="bg-gray-50 text-slate-900 h-screen overflow-hidden selection:bg-red-100 selection:text-red-900">
     <div id="root" class="h-full"></div>
     <script type="module" src="/index.tsx"></script>
   </body>
