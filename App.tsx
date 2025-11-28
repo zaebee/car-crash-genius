@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import Sidebar, { AVAILABLE_MODELS } from './components/Sidebar';
 import Timeline from './components/Timeline';
 import ChatInterface from './components/ChatInterface';
+import EvidenceView from './components/EvidenceView';
 import { CrashAnalysisResult, UploadedFile, AIModel } from './types';
 import { generateCrashReport } from './services/geminiService';
-import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu } from 'lucide-react';
+import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu, FileText } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 
 const App: React.FC = () => {
@@ -16,6 +17,7 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [suggestedQuery, setSuggestedQuery] = useState<string>('');
+  const [activeView, setActiveView] = useState<'analysis' | 'evidence'>('analysis');
   
   // Model & Key State
   const [selectedModel, setSelectedModel] = useState<AIModel>(AVAILABLE_MODELS[0]);
@@ -26,6 +28,7 @@ const App: React.FC = () => {
     setError(null);
     setCurrentFiles(files);
     setMeetingData(null); // Clear previous
+    setActiveView('analysis');
     setIsSidebarOpen(false); // Close sidebar on mobile after submit
     
     try {
@@ -47,6 +50,10 @@ const App: React.FC = () => {
     }
   };
 
+  const handleAddFiles = (newFiles: UploadedFile[]) => {
+    setCurrentFiles(prev => [...prev, ...newFiles]);
+  };
+
   const handleTopicClick = (query: string) => {
     setSuggestedQuery(query);
     setIsChatOpen(true); // Ensure chat is open to receive query
@@ -54,6 +61,13 @@ const App: React.FC = () => {
 
   const toggleLanguage = () => {
     setLanguage(language === 'en' ? 'ru' : 'en');
+  };
+
+  const navigateToEvidence = () => {
+    if (meetingData) {
+        setActiveView('evidence');
+        setIsSidebarOpen(false);
+    }
   };
 
   return (
@@ -69,6 +83,7 @@ const App: React.FC = () => {
         onSelectModel={setSelectedModel}
         mistralKey={mistralKey}
         onMistralKeyChange={setMistralKey}
+        onLogoClick={navigateToEvidence}
       />
 
       {/* Main Content (Center) */}
@@ -85,12 +100,22 @@ const App: React.FC = () => {
              </button>
 
              <div className="flex items-center gap-2 text-slate-500 text-xs md:text-sm font-medium">
-                <LayoutDashboard size={16} className="hidden md:block" />
-                <span className="hidden md:inline">{t.workspace}</span>
+                <div 
+                  onClick={navigateToEvidence}
+                  className={`flex items-center gap-1.5 ${meetingData ? 'cursor-pointer hover:text-slate-800 transition-colors' : ''}`}
+                >
+                    <LayoutDashboard size={16} className="hidden md:block" />
+                    <span className="hidden md:inline">{t.workspace}</span>
+                </div>
                 {meetingData && (
                     <>
                       <span className="hidden md:inline text-slate-300">/</span>
-                      <span className="text-red-600 font-semibold truncate max-w-[150px] md:max-w-xs">{meetingData.title}</span>
+                      <span 
+                        className={`font-semibold truncate max-w-[150px] md:max-w-xs cursor-pointer hover:underline ${activeView === 'analysis' ? 'text-red-600' : 'text-slate-600'}`}
+                        onClick={() => setActiveView('analysis')}
+                      >
+                        {meetingData.title}
+                      </span>
                     </>
                 )}
              </div>
@@ -164,7 +189,18 @@ const App: React.FC = () => {
           )}
 
           {meetingData && !isGenerating && (
-            <Timeline data={meetingData} onTopicClick={handleTopicClick} files={currentFiles} />
+            <>
+              {activeView === 'analysis' ? (
+                <Timeline 
+                    data={meetingData} 
+                    onTopicClick={handleTopicClick} 
+                    files={currentFiles} 
+                    onViewAllEvidence={() => setActiveView('evidence')}
+                />
+              ) : (
+                <EvidenceView files={currentFiles} onAddFiles={handleAddFiles} />
+              )}
+            </>
           )}
         </main>
       </div>

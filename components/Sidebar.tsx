@@ -19,6 +19,7 @@ interface SidebarProps {
   onSelectModel: (model: AIModel) => void;
   mistralKey: string;
   onMistralKeyChange: (key: string) => void;
+  onLogoClick?: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -30,7 +31,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedModel,
   onSelectModel,
   mistralKey,
-  onMistralKeyChange
+  onMistralKeyChange,
+  onLogoClick
 }) => {
   const { t } = useLanguage();
   const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -93,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         <div className="p-6 border-b border-slate-800 flex justify-between items-start">
-          <div>
+          <div onClick={onLogoClick} className={`transition-opacity ${onLogoClick ? 'cursor-pointer hover:opacity-80' : ''}`}>
             <div className="flex items-center gap-2 font-bold text-xl text-white">
               <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center text-white shadow-lg shadow-red-600/30">
                 <Car size={18} />

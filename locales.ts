@@ -45,6 +45,13 @@ type Translations = {
     evidenceGallery: string;
     filesAttached: string;
     addMore: string;
+    caseEvidence: string;
+    visualEvidence: string;
+    documents: string;
+    noEvidence: string;
+    uploadAdditional: string;
+    viewFullGallery: string;
+    analysisReport: string;
   }
 };
 
@@ -93,6 +100,13 @@ export const translations: Translations = {
     evidenceGallery: "Evidence Gallery",
     filesAttached: "Files Attached",
     addMore: "Add Files",
+    caseEvidence: "Case Evidence",
+    visualEvidence: "Visual Evidence",
+    documents: "Documents",
+    noEvidence: "No evidence files attached to this case.",
+    uploadAdditional: "Upload Additional Evidence",
+    viewFullGallery: "View Full Gallery",
+    analysisReport: "Analysis Report",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -138,5 +152,12 @@ export const translations: Translations = {
     evidenceGallery: "Галерея доказательств",
     filesAttached: "Файлов прикреплено",
     addMore: "Добавить",
+    caseEvidence: "Материалы дела",
+    visualEvidence: "Фотофиксация",
+    documents: "Документы",
+    noEvidence: "Нет прикрепленных файлов.",
+    uploadAdditional: "Загрузить материалы",
+    viewFullGallery: "Открыть галерею",
+    analysisReport: "Отчет об анализе",
   }
 };

@@ -7,9 +7,10 @@ interface TimelineProps {
   data: CrashAnalysisResult;
   files: UploadedFile[];
   onTopicClick?: (topic: string) => void;
+  onViewAllEvidence?: () => void;
 }
 
-const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick }) => {
+const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAllEvidence }) => {
   const { t } = useLanguage();
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -161,10 +162,19 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick }) => {
           {/* Evidence Gallery */}
           {files.length > 0 && (
             <div className="mt-8 pt-6 border-t border-slate-100" data-html2canvas-ignore="true">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
-                    <ImageIcon size={14} />
-                    {t.evidenceGallery}
-                </h3>
+                <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                        <ImageIcon size={14} />
+                        {t.evidenceGallery}
+                    </h3>
+                    <button 
+                        onClick={onViewAllEvidence}
+                        className="text-xs font-semibold text-red-600 hover:text-red-700 flex items-center gap-1"
+                    >
+                        {t.viewFullGallery}
+                        <ArrowRight size={14} />
+                    </button>
+                </div>
                 <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
                     {files.map((file, idx) => (
                         <div 
