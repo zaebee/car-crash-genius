@@ -179,8 +179,9 @@ const generateGoogleReport = async (parts: any[], modelId: string, langName: str
 };
 
 const generateMistralReport = async (prompt: string, files: UploadedFile[], apiKey: string, langName: string) => {
+    const jsonSchemaStr = JSON.stringify(CRASH_SCHEMA);
     let messages: any[] = [
-        { role: "system", content: `You are a helpful insurance adjuster. Output valid JSON only matching schema. Language: ${langName}.` },
+        { role: "system", content: `You are a helpful insurance adjuster. Output valid JSON only matching schema. Language: ${langName}. SCHEMA: ${jsonSchemaStr}` },
         { role: "user", content: [] }
     ];
     let contentArr: any[] = [{ type: "text", text: prompt }];
@@ -197,11 +198,22 @@ const generateMistralReport = async (prompt: string, files: UploadedFile[], apiK
         const response = await fetch("https://api.mistral.ai/v1/chat/completions", {
             method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
-            body: JSON.stringify({ model: "pixtral-12b-2409", messages: messages, response_format: { type: "json_object" } })
+            body: JSON.stringify({ 
+                model: "pixtral-large-latest", // Use Pixtral Large for best vision capabilities
+                messages: messages, 
+                response_format: { type: "json_object" },
+                temperature: 0.2
+            })
         });
         if (!response.ok) throw new Error("Mistral API Error");
         const data = await response.json();
-        const parsed = JSON.parse(data.choices[0]?.message?.content || "{}");
+        
+        let rawContent = data.choices[0]?.message?.content || "{}";
+        
+        // Strip markdown code blocks if present (common LLM behavior)
+        rawContent = rawContent.replace(/```json\n?|```/g, '').trim();
+
+        const parsed = JSON.parse(rawContent);
         return sanitizeCrashReport(parsed);
     } catch (error) {
         console.error("Mistral Service Error:", error);
@@ -242,7 +254,8 @@ export const createChatSession = async (contextData: CrashAnalysisResult, files:
 
   if (model.provider === 'mistral') {
       if (!mistralApiKey) throw new Error("MISTRAL_NOT_CONFIGURED");
-      return new MistralChatSession(mistralApiKey, "mistral-large-latest", [{ role: 'user', content: reportContext }], systemInstruction);
+      // Use pixtral-large-latest for chat as well to support potential image context in history
+      return new MistralChatSession(mistralApiKey, "pixtral-large-latest", [{ role: 'user', content: reportContext }], systemInstruction);
   }
 
   const ai = getGoogleClient();

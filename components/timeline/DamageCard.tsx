@@ -56,7 +56,7 @@ const DamageCard: React.FC<DamageCardProps> = ({
                     
                     {/* Header: Title & Chevron */}
                     <div className="flex items-start justify-between gap-3 mb-2">
-                         <h3 className="text-sm md:text-base font-bold text-slate-800 group-hover:text-red-600 transition-colors leading-snug pt-0.5">
+                         <h3 className="text-sm md:text-base font-bold text-slate-800 group-hover:text-red-600 transition-colors leading-snug pt-0.5 break-words">
                             {item.partName}
                         </h3>
                         <ChevronDown size={16} className={`text-slate-400 shrink-0 mt-1 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
@@ -76,7 +76,7 @@ const DamageCard: React.FC<DamageCardProps> = ({
                     {/* Description - Collapsible */}
                     <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${isExpanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
                         <div className="overflow-hidden">
-                             <p className="text-slate-600 text-sm leading-relaxed mb-4">
+                             <p className="text-slate-600 text-sm leading-relaxed mb-4 break-words">
                                  {item.description}
                              </p>
 
@@ -105,7 +105,7 @@ const DamageCard: React.FC<DamageCardProps> = ({
 
                     {/* Preview Text (Only when collapsed) */}
                     {!isExpanded && (
-                       <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 mt-1">
+                       <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 mt-1 break-words">
                           {item.description}
                        </p>
                     )}

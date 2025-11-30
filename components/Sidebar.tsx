@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus, Wallet, LogOut, Mic } from 'lucide-react';
 import { UploadedFile, AIModel, TonWalletState } from '../types';
@@ -10,7 +9,7 @@ import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 export const AVAILABLE_MODELS: AIModel[] = [
   { id: 'google-pro', name: 'Gemini 3 Pro', provider: 'google', description: 'Deep reasoning', badge: 'Best' },
   { id: 'google-flash', name: 'Gemini 2.5 Flash', provider: 'google', description: 'High speed' },
-  { id: 'mistral-large', name: 'Mistral Large', provider: 'mistral', description: 'Open weights' },
+  { id: 'mistral-large', name: 'Pixtral Large', provider: 'mistral', description: 'State-of-the-art Vision' },
 ];
 
 interface SidebarProps {
