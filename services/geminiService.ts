@@ -223,8 +223,15 @@ const generateMistralReport = async (prompt: string, files: UploadedFile[], apiK
 
 export const generateCrashReport = async (files: UploadedFile[], textInput: string, language: Language, model: AIModel, mistralApiKey?: string): Promise<CrashAnalysisResult> => {
   const langName = language === 'ru' ? 'Russian' : 'English';
+  
   const prompt = `
-    Analyze the provided evidence (images/docs). Identify damages, vehicle details, and costs.
+    Analyze the provided evidence (images/docs). 
+    1. VISUAL VEHICLE IDENTIFICATION: Look closely at the images to extract:
+       - Make, Model, Year (estimate).
+       - License Plate / Registration Number (Perform OCR to read characters if visible).
+       - Color.
+    2. DAMAGE ANALYSIS: Identify damages with severity and bounding boxes.
+    3. COST ESTIMATION: Estimate repair costs.
     
     IMPORTANT: Return valid JSON matching the schema.
     For 'damagePoints', if you see the damage in the FIRST image, strictly provide 'boundingBox' [ymin, xmin, ymax, xmax] (0-1000).

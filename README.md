@@ -10,6 +10,12 @@ CarCrashGenius is a sophisticated Progressive Web Application (PWA) designed to 
 
 Furthermore, it integrates Web3 functionality via the **TON Blockchain**, allowing users to generate immutable digital certificates of their damage reports using IPFS and Smart Contracts.
 
+## Documentation
+
+*   [**Gemini AI Integration**](./GEMINI.md): Details on models, schemas, and prompt engineering.
+*   [**TON Blockchain**](./TON.md): Details on wallet connection and certification workflow.
+*   [**Privacy Policy**](./PRIVACY.md): How we handle user data.
+
 ## Key Features
 
 ### 🤖 AI Analysis Engine
@@ -50,12 +56,6 @@ The application requires the following environment variables to be set in the bu
 | `API_KEY` | **Required.** Google Gemini API Key. |
 
 *Note: Mistral API Keys are entered by the user in the UI and stored in browser memory for security.*
-
-## Privacy & Security
-
-*   **Data Processing:** Images are sent directly to the selected AI provider (Google or Mistral) for analysis.
-*   **Client-Side Logic:** No intermediate backend server stores your photos.
-*   **Mistral Keys:** User-provided keys are never logged or sent to our servers.
 
 ## License
 
