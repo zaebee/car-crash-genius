@@ -1,12 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Sidebar, { AVAILABLE_MODELS } from './components/Sidebar';
 import Timeline from './components/Timeline';
 import ChatInterface from './components/ChatInterface';
 import EvidenceView from './components/EvidenceView';
 import { CrashAnalysisResult, UploadedFile, AIModel, TonWalletState } from './types';
 import { generateCrashReport } from './services/geminiService';
-import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu, FileText } from 'lucide-react';
+import { LayoutDashboard, PanelRightOpen, PanelRightClose, Globe, Car, ShieldCheck, Menu, FileText, RefreshCw } from 'lucide-react';
 import { useLanguage } from './contexts/LanguageContext';
 import { initTonConnect } from './services/tonService';
 
@@ -32,12 +32,58 @@ const App: React.FC = () => {
     rawAddress: null
   });
 
+  // Pull-to-Refresh State
+  const mainRef = useRef<HTMLDivElement>(null);
+  const [pullDist, setPullDist] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const touchStartRef = useRef(0);
+
   useEffect(() => {
     // Initialize TON Connect on mount
     initTonConnect((wallet) => {
       setWalletState(wallet);
     });
   }, []);
+
+  // Pull-to-Refresh Handlers
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (mainRef.current && mainRef.current.scrollTop <= 0) {
+      touchStartRef.current = e.touches[0].clientY;
+    } else {
+      touchStartRef.current = 0;
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || isRefreshing) return;
+    const touchY = e.touches[0].clientY;
+    const dist = touchY - touchStartRef.current;
+    
+    // Only engage if pulling down and at top
+    if (dist > 0 && mainRef.current && mainRef.current.scrollTop <= 0) {
+      // Logarithmic resistance
+      const resistance = Math.pow(dist, 0.8);
+      // Cap max pull visual
+      setPullDist(Math.min(resistance, 150));
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (isRefreshing) return;
+    
+    touchStartRef.current = 0;
+    
+    // Threshold to trigger refresh
+    if (pullDist > 70) { 
+       setIsRefreshing(true);
+       setPullDist(70); // Snap to loading position
+       setTimeout(() => {
+         window.location.reload();
+       }, 800);
+    } else {
+       setPullDist(0);
+    }
+  };
 
   const handleGenerate = async (files: UploadedFile[], text: string) => {
     setIsGenerating(true);
@@ -175,7 +221,23 @@ const App: React.FC = () => {
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 scroll-smooth">
+        <main 
+            ref={mainRef}
+            className="flex-1 overflow-y-auto bg-slate-50 scroll-smooth relative"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+        >
+          {/* Pull-to-Refresh Indicator */}
+          <div 
+            className="absolute top-0 left-0 w-full flex justify-center pointer-events-none transition-transform duration-200 z-50"
+            style={{ transform: `translateY(${pullDist > 0 ? pullDist - 50 : -60}px)` }}
+          >
+             <div className={`bg-white p-2.5 rounded-full shadow-lg border border-slate-200 ${isRefreshing ? 'animate-spin' : ''}`}>
+                <RefreshCw size={20} className="text-red-600" style={{ transform: `rotate(${pullDist * 2.5}deg)` }} />
+             </div>
+          </div>
+
           {!meetingData && !isGenerating && !error && (
             <div className="h-full flex flex-col items-center justify-center text-slate-400 p-8">
               <div className="w-24 h-24 bg-white border border-slate-200 rounded-3xl flex items-center justify-center mb-6 shadow-sm relative overflow-hidden group cursor-pointer hover:border-red-200 transition-all" onClick={() => setIsSidebarOpen(true)}>
