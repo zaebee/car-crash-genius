@@ -1,10 +1,11 @@
 
-import React, { useRef, useState } from 'react';
-import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus, Wallet, LogOut } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Upload, Car, Loader2, X, AlertTriangle, ShieldCheck, FileText, Sparkles, Wind, ChevronDown, Check, Key, Plus, Wallet, LogOut, Mic } from 'lucide-react';
 import { UploadedFile, AIModel, TonWalletState } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 import { processFile } from '../services/fileProcessing';
 import { connectWallet, disconnectWallet } from '../services/tonService';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 export const AVAILABLE_MODELS: AIModel[] = [
   { id: 'google-pro', name: 'Gemini 3 Pro', provider: 'google', description: 'Deep reasoning', badge: 'Best' },
@@ -39,11 +40,26 @@ const Sidebar: React.FC<SidebarProps> = ({
   onLogoClick,
   wallet
 }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [textInput, setTextInput] = useState('');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Voice Input Hook
+  const { isListening, transcript, startListening, stopListening, hasSupport } = useSpeechRecognition(language);
+
+  // Sync transcript to input
+  useEffect(() => {
+    if (transcript) {
+        setTextInput(prev => {
+            // Very simple append logic - replace if short, append if long
+            if (!prev) return transcript;
+            // Avoid duplicate appends if transcript updates continuously
+            return transcript; 
+        });
+    }
+  }, [transcript]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -288,16 +304,25 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
 
           {/* Text Input Section */}
-          <div className="space-y-3">
+          <div className="space-y-3 relative">
             <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               {t.additionalContext}
             </label>
             <textarea
               className="w-full h-32 p-3 text-sm bg-slate-800 border border-slate-700 rounded-xl focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none resize-none transition-all placeholder:text-slate-600 text-slate-200"
-              placeholder={t.contextPlaceholder}
+              placeholder={isListening ? t.listening : t.contextPlaceholder}
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
             />
+            {hasSupport && (
+                <button
+                    onClick={isListening ? stopListening : startListening}
+                    className={`absolute bottom-3 right-3 p-2 rounded-full transition-all ${isListening ? 'bg-red-600 text-white animate-pulse' : 'bg-slate-700 text-slate-400 hover:text-white'}`}
+                    title={t.tapToSpeak}
+                >
+                    <Mic size={16} />
+                </button>
+            )}
           </div>
 
           {/* Action Button */}

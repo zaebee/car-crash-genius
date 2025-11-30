@@ -1,9 +1,11 @@
+
 import React, { useEffect, useRef, useState } from 'react';
-import { Send, Bot, User, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, ShieldCheck, RefreshCw, Mic } from 'lucide-react';
 import { CrashAnalysisResult, UploadedFile, ChatMessage, AIModel, ChatSession } from '../types';
 import { createChatSession } from '../services/geminiService';
 import { useLanguage } from '../contexts/LanguageContext';
 import { AVAILABLE_MODELS } from './Sidebar';
+import { useSpeechRecognition } from '../hooks/useSpeechRecognition';
 
 interface ChatInterfaceProps {
   initialData: CrashAnalysisResult;
@@ -23,6 +25,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, files, sugge
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const initializedRef = useRef<string | null>(null);
+
+  const { isListening, transcript, startListening, stopListening, hasSupport } = useSpeechRecognition(language);
+
+  // Sync voice transcript
+  useEffect(() => {
+    if (transcript) {
+        setInput(transcript);
+    }
+  }, [transcript]);
 
   // Initialize Chat Session
   useEffect(() => {
@@ -73,6 +84,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, files, sugge
 
     const userText = input;
     setInput('');
+    if (isListening) stopListening();
     
     // Add User Message
     setMessages(prev => [...prev, { role: 'user', text: userText }]);
@@ -166,7 +178,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, files, sugge
         <div className="relative">
           <textarea
             className="w-full bg-slate-50 border border-slate-200 focus:bg-white focus:border-red-500 focus:ring-1 focus:ring-red-500 rounded-xl py-3 px-4 pr-12 text-sm outline-none transition-all resize-none shadow-sm"
-            placeholder={t.askPlaceholder}
+            placeholder={isListening ? t.listening : t.askPlaceholder}
             rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -178,13 +190,23 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ initialData, files, sugge
             }}
             style={{ minHeight: '48px', maxHeight: '120px' }}
           />
-          <button 
-            onClick={handleSend}
-            disabled={!input.trim() || isTyping}
-            className="absolute right-2 bottom-2 p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
-          >
-            <Send size={16} />
-          </button>
+          <div className="absolute right-2 bottom-2 flex items-center gap-1">
+             {hasSupport && (
+                <button
+                    onClick={isListening ? stopListening : startListening}
+                    className={`p-2 rounded-lg transition-colors ${isListening ? 'bg-red-100 text-red-600 animate-pulse' : 'text-slate-400 hover:text-red-500 hover:bg-red-50'}`}
+                >
+                    <Mic size={16} />
+                </button>
+             )}
+            <button 
+                onClick={handleSend}
+                disabled={!input.trim() || isTyping}
+                className="p-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
+            >
+                <Send size={16} />
+            </button>
+          </div>
         </div>
         <p className="text-[10px] text-slate-400 text-center mt-2">
           {t.footer}

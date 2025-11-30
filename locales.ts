@@ -86,6 +86,10 @@ type Translations = {
     ipfsHash: string;
     explorerLink: string;
     rewardNote: string;
+    // Misc
+    uploadEvidence: string;
+    listening: string;
+    tapToSpeak: string;
   }
 };
 
@@ -171,6 +175,9 @@ export const translations: Translations = {
     ipfsHash: "IPFS Record",
     explorerLink: "View on TON Explorer",
     rewardNote: "Smart Contract Reward Active",
+    uploadEvidence: "Upload Evidence",
+    listening: "Listening...",
+    tapToSpeak: "Tap to Speak",
   },
   ru: {
     appTitle: "CarCrashGenius",
@@ -253,5 +260,8 @@ export const translations: Translations = {
     ipfsHash: "Запись IPFS",
     explorerLink: "Открыть в TON Explorer",
     rewardNote: "Награда смарт-контракта активна",
+    uploadEvidence: "Загрузить доказательства",
+    listening: "Слушаю...",
+    tapToSpeak: "Нажать, чтобы сказать",
   }
 };

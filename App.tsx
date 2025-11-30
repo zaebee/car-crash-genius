@@ -190,7 +190,7 @@ const App: React.FC = () => {
                 onClick={() => setIsSidebarOpen(true)}
                 className="mt-6 md:hidden px-6 py-2 bg-red-600 text-white rounded-lg font-medium shadow-lg shadow-red-600/20"
               >
-                Upload Evidence
+                {t.uploadEvidence}
               </button>
             </div>
           )}
