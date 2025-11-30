@@ -12,11 +12,12 @@ const MANIFEST_URL = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonc
 
 const waitForScript = async () => {
     let attempts = 0;
-    while (!window.TonConnectUI && attempts < 50) { // Wait up to 5 seconds
+    // Increased wait time to 10 seconds (100 * 100ms) to account for slow networks/CDNs
+    while ((!window.TonConnectUI || !window.TonConnectUI.TonConnectUI) && attempts < 100) { 
         await new Promise(resolve => setTimeout(resolve, 100));
         attempts++;
     }
-    return !!window.TonConnectUI;
+    return !!(window.TonConnectUI && window.TonConnectUI.TonConnectUI);
 };
 
 const formatWalletState = (wallet: any): TonWalletState => {
@@ -33,7 +34,7 @@ export const initTonConnect = async (
   // Wait for the script to load
   const isLoaded = await waitForScript();
   if (!isLoaded) {
-      console.error("TON Connect SDK failed to load.");
+      console.warn("TON Connect SDK failed to load. Wallet features will be unavailable.");
       return;
   }
 
@@ -74,9 +75,16 @@ export const initTonConnect = async (
 export const connectWallet = async () => {
   if (!tonConnectUI) {
       // Try to wait one more time in case it's mid-load
-      await waitForScript();
-      if (!tonConnectUI) {
+      const loaded = await waitForScript();
+      if (!loaded || !tonConnectUI) {
          console.warn("TonConnectUI not initialized");
+         // Try one last-ditch init if script loaded but init failed previously
+         if (loaded && window.TonConnectUI) {
+            try {
+                tonConnectUI = new window.TonConnectUI.TonConnectUI({ manifestUrl: MANIFEST_URL });
+                await tonConnectUI.openModal();
+            } catch(e) { console.error(e); }
+         }
          return;
       }
   }
