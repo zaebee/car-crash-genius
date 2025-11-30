@@ -1,3 +1,4 @@
+
 import { TonWalletState } from "../types";
 
 // Declare TonConnectUI on window interface
@@ -11,6 +12,8 @@ let tonConnectUI: any = null;
 const MANIFEST_URL = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonconnect-manifest.json'; 
 
 const waitForScript = async () => {
+    if (typeof window === 'undefined') return false;
+
     let attempts = 0;
     // Increased wait time to 10 seconds (100 * 100ms) to account for slow networks/CDNs
     while ((!window.TonConnectUI || !window.TonConnectUI.TonConnectUI) && attempts < 100) { 
@@ -21,6 +24,9 @@ const waitForScript = async () => {
 };
 
 const formatWalletState = (wallet: any): TonWalletState => {
+    if (!wallet || !wallet.account) {
+        return { isConnected: false, address: null, rawAddress: null };
+    }
     return {
        isConnected: true,
        address: toUserFriendlyAddress(wallet.account.address),
@@ -40,7 +46,9 @@ export const initTonConnect = async (
 
   if (!tonConnectUI) {
     try {
-        tonConnectUI = new window.TonConnectUI.TonConnectUI({
+        // Safe access to window object
+        const TC = window.TonConnectUI.TonConnectUI;
+        tonConnectUI = new TC({
             manifestUrl: MANIFEST_URL,
         });
 
@@ -51,15 +59,7 @@ export const initTonConnect = async (
 
         // Subscribe to changes
         tonConnectUI.onStatusChange((wallet: any) => {
-            if (wallet) {
-                onStatusChange(formatWalletState(wallet));
-            } else {
-                onStatusChange({
-                    isConnected: false,
-                    address: null,
-                    rawAddress: null
-                });
-            }
+            onStatusChange(formatWalletState(wallet));
         });
     } catch (e) {
         console.error("Failed to initialize TonConnectUI", e);

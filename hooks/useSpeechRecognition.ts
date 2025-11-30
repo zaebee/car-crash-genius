@@ -1,7 +1,7 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
-// Define SpeechRecognition types (not in standard TS lib yet)
+// Define SpeechRecognition types
 interface SpeechRecognitionEvent extends Event {
     results: SpeechRecognitionResultList;
 }
@@ -26,6 +26,7 @@ interface SpeechRecognition extends EventTarget {
     lang: string;
     start(): void;
     stop(): void;
+    abort(): void;
     onresult: (event: SpeechRecognitionEvent) => void;
     onend: () => void;
     onerror: (event: any) => void;
@@ -42,11 +43,16 @@ export const useSpeechRecognition = (language: string = 'en') => {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const [error, setError] = useState<string | null>(null);
-    const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
+    const [hasSupport, setHasSupport] = useState(false);
+    
+    // Use ref to keep track of recognition instance to avoid stale closures
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
 
     useEffect(() => {
         const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
         if (SpeechRecognitionCtor) {
+            setHasSupport(true);
             const recognitionInstance = new SpeechRecognitionCtor();
             recognitionInstance.continuous = false;
             recognitionInstance.interimResults = true;
@@ -61,8 +67,14 @@ export const useSpeechRecognition = (language: string = 'en') => {
             };
 
             recognitionInstance.onerror = (event: any) => {
-                console.error("Speech Recognition Error", event);
-                setError(event.error);
+                // Extract the specific error code (e.g., 'not-allowed', 'no-speech')
+                const errorMsg = event.error || 'Unknown error';
+                console.warn("Speech Recognition Status:", errorMsg);
+                
+                // Don't treat 'no-speech' as a critical error, just a timeout
+                if (errorMsg !== 'no-speech') {
+                    setError(errorMsg);
+                }
                 setIsListening(false);
             };
 
@@ -70,31 +82,49 @@ export const useSpeechRecognition = (language: string = 'en') => {
                 setIsListening(false);
             };
 
-            setRecognition(recognitionInstance);
+            recognitionRef.current = recognitionInstance;
         } else {
+            setHasSupport(false);
             setError("Browser does not support Speech Recognition");
         }
+
+        return () => {
+            if (recognitionRef.current) {
+                recognitionRef.current.abort();
+            }
+        };
     }, [language]);
 
     const startListening = useCallback(() => {
+        const recognition = recognitionRef.current;
         if (recognition) {
             try {
+                // Reset previous state
                 setTranscript('');
+                setError(null);
+                
+                // Attempt to start
                 recognition.start();
                 setIsListening(true);
-                setError(null);
             } catch (e) {
-                console.error(e);
+                console.warn("Speech recognition already active or failed to start:", e);
+                // If it's already started, we just update state to match
+                setIsListening(true);
             }
         }
-    }, [recognition]);
+    }, []);
 
     const stopListening = useCallback(() => {
+        const recognition = recognitionRef.current;
         if (recognition) {
-            recognition.stop();
+            try {
+                recognition.stop();
+            } catch (e) {
+                console.warn("Failed to stop recognition:", e);
+            }
             setIsListening(false);
         }
-    }, [recognition]);
+    }, []);
 
-    return { isListening, transcript, startListening, stopListening, error, hasSupport: !!recognition };
+    return { isListening, transcript, startListening, stopListening, error, hasSupport };
 };
