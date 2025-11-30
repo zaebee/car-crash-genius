@@ -163,7 +163,8 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               <h2 className="text-lg md:text-xl font-bold text-slate-800">{t.damageVisualization}</h2>
           </div>
           
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
+          {/* Adjusted grid gap for new card style */}
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
             {data.damagePoints.map((item, index) => (
                 <DamageCard 
                     key={index}
