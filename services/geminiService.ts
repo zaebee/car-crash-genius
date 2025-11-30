@@ -140,6 +140,18 @@ const CRASH_SCHEMA: Schema = {
   required: ["title", "summary", "vehiclesInvolved", "estimatedRepairCostRange", "damagePoints"],
 };
 
+// --- Helper ---
+const sanitizeCrashReport = (data: any): CrashAnalysisResult => {
+    return {
+        title: data.title || "Untitled Analysis",
+        summary: data.summary || "No summary provided.",
+        estimatedRepairCostRange: data.estimatedRepairCostRange || "Unknown",
+        vehiclesInvolved: Array.isArray(data.vehiclesInvolved) ? data.vehiclesInvolved : [],
+        identifiedVehicles: Array.isArray(data.identifiedVehicles) ? data.identifiedVehicles : undefined,
+        damagePoints: Array.isArray(data.damagePoints) ? data.damagePoints : []
+    };
+};
+
 // --- Generators ---
 const generateGoogleReport = async (parts: any[], modelId: string, langName: string) => {
     try {
@@ -155,7 +167,8 @@ const generateGoogleReport = async (parts: any[], modelId: string, langName: str
         });
         const jsonText = response.text;
         if (!jsonText) throw new Error("EMPTY_RESPONSE");
-        return JSON.parse(jsonText);
+        const parsed = JSON.parse(jsonText);
+        return sanitizeCrashReport(parsed);
     } catch (error: any) {
         console.error("Google Service Error:", error);
         const msg = error.message || '';
@@ -188,7 +201,8 @@ const generateMistralReport = async (prompt: string, files: UploadedFile[], apiK
         });
         if (!response.ok) throw new Error("Mistral API Error");
         const data = await response.json();
-        return JSON.parse(data.choices[0]?.message?.content || "{}");
+        const parsed = JSON.parse(data.choices[0]?.message?.content || "{}");
+        return sanitizeCrashReport(parsed);
     } catch (error) {
         console.error("Mistral Service Error:", error);
         throw error;

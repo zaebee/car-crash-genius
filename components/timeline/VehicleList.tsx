@@ -8,14 +8,14 @@ interface VehicleListProps {
   t: any;
 }
 
-const VehicleList: React.FC<VehicleListProps> = ({ vehicles, identified, t }) => (
+const VehicleList: React.FC<VehicleListProps> = ({ vehicles = [], identified, t }) => (
   <div className="mt-8 pt-6 border-t border-slate-100">
     <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
         <CarFront size={14} />
         {t.identifiedVehicles}
     </h3>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-       {identified ? (
+       {identified && identified.length > 0 ? (
            identified.map((vehicle, idx) => (
                <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-3 flex gap-3 items-start hover:border-slate-300 transition-colors">
                    <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 shrink-0 shadow-sm">
@@ -40,7 +40,7 @@ const VehicleList: React.FC<VehicleListProps> = ({ vehicles, identified, t }) =>
                </div>
            ))
        ) : (
-           vehicles.map((vehicle, idx) => (
+           (vehicles || []).map((vehicle, idx) => (
             <span 
                 key={idx} 
                 className="inline-flex items-center px-3 py-2 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 border border-slate-200"

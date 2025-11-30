@@ -27,7 +27,7 @@ const InteractiveMap: React.FC<InteractiveMapProps> = ({
     if (!mainImage) return null;
 
     const renderBoundingBoxes = () => {
-        return data.damagePoints.map((item, index) => {
+        return (data.damagePoints || []).map((item, index) => {
           if (!item.boundingBox || item.boundingBox.length !== 4) return null;
           const [ymin, xmin, ymax, xmax] = item.boundingBox;
           const styles = getSeverityStyles(item.severity);

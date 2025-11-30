@@ -131,7 +131,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
               </p>
             </div>
             
-            <HeaderStats cost={data.estimatedRepairCostRange} count={data.damagePoints.length} t={t} />
+            <HeaderStats cost={data.estimatedRepairCostRange} count={(data.damagePoints || []).length} t={t} />
           </div>
         
           <VehicleList vehicles={data.vehiclesInvolved} identified={data.identifiedVehicles} t={t} />
@@ -165,7 +165,7 @@ const Timeline: React.FC<TimelineProps> = ({ data, files, onTopicClick, onViewAl
           
           {/* Adjusted grid gap for new card style */}
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-3 md:gap-4">
-            {data.damagePoints.map((item, index) => (
+            {(data.damagePoints || []).map((item, index) => (
                 <DamageCard 
                     key={index}
                     index={index}
